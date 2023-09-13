@@ -2,8 +2,8 @@ package api
 
 import (
 	"github.com/labstack/echo/v4"
-	"github.com/lionslon/yapmetrics/internal/handlers"
-	"github.com/lionslon/yapmetrics/internal/storage"
+	"github.com/lionslon/go-yapmetrics/internal/handlers"
+	"github.com/lionslon/go-yapmetrics/internal/storage"
 	"log"
 )
 
