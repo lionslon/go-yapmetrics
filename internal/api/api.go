@@ -1,65 +1,34 @@
 package api
 
 import (
-	"net/http"
-	"strconv"
-	"strings"
-
-	"github.com/lionslon/go-yapmetrics/internal/storage"
+	"github.com/labstack/echo/v4"
+	"github.com/lionslon/yapmetrics/internal/handlers"
+	"github.com/lionslon/yapmetrics/internal/storage"
+	"log"
 )
 
 type APIServer struct {
 	storage *storage.MemStorage
+	echo    *echo.Echo
 }
 
 func New() *APIServer {
-	return &APIServer{storage.New()}
+	apiS := &APIServer{}
+	apiS.storage = storage.New()
+	apiS.echo = echo.New()
+
+	apiS.echo.GET("/", handlers.AllMetrics(apiS.storage))
+	apiS.echo.GET("/value/:typeM/:nameM", handlers.MetricsValue(apiS.storage))
+	apiS.echo.POST("/update/:typeM/:nameM/:valueM", handlers.PostWebhandle(apiS.storage))
+
+	return apiS
 }
 
-func (s *APIServer) Start() error {
-	return http.ListenAndServe(`:8080`, http.HandlerFunc(s.webhandle()))
-}
-
-func (s *APIServer) webhandle() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// разрешаем только POST-запросы
-		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		//println(r.URL.Path)
-		// разбиваем запрос и проверяем соответствии формату
-		reqURL := strings.Split(r.URL.Path, "/")
-		if len(reqURL) != 5 || reqURL[1] != "update" {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-
-		// обработка запроса
-		metricsType := reqURL[2]
-		metricsName := reqURL[3]
-		metricsValue := reqURL[4]
-		if metricsType == "counter" {
-			if value, err := strconv.ParseInt(metricsValue, 10, 64); err == nil {
-				s.storage.UpdateCounter(metricsName, value)
-				w.WriteHeader(http.StatusOK)
-			} else {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-		} else if metricsType == "gauge" {
-			if value, err := strconv.ParseFloat(metricsValue, 64); err == nil {
-				s.storage.UpdateGauge(metricsName, value)
-				w.WriteHeader(http.StatusOK)
-			} else {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-		} else {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+func (a *APIServer) Start() error {
+	err := a.echo.Start(":8080")
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	return nil
 }
