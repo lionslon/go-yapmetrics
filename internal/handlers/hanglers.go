@@ -3,7 +3,6 @@ package handlers
 import (
 	"fmt"
 	"github.com/labstack/echo/v4"
-	"github.com/lionslon/go-yapmetrics/internal/storage"
 	"net/http"
 	"strconv"
 )
@@ -46,7 +45,7 @@ func PostWebhandle(s StorageUpdater) echo.HandlerFunc {
 	}
 }
 
-func MetricsValue(s *storage.MemStorage) echo.HandlerFunc {
+func MetricsValue(s StorageUpdater) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		typeM := ctx.Param("typeM")
 		nameM := ctx.Param("nameM")
@@ -61,7 +60,7 @@ func MetricsValue(s *storage.MemStorage) echo.HandlerFunc {
 	}
 }
 
-func AllMetrics(s *storage.MemStorage) echo.HandlerFunc {
+func AllMetrics(s StorageUpdater) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		err := ctx.String(http.StatusOK, s.AllMetrics())
 		if err != nil {
