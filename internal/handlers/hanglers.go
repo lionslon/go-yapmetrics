@@ -8,7 +8,18 @@ import (
 	"strconv"
 )
 
-func PostWebhandle(s *storage.MemStorage) echo.HandlerFunc {
+type StorageUpdater interface {
+	UpdateCounter(string, int64)
+	UpdateGauge(string, float64)
+	GetValue(string, string) (string, int)
+	AllMetrics() string
+}
+
+type Handler struct {
+	stor StorageUpdater
+}
+
+func PostWebhandle(s StorageUpdater) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		metricsType := ctx.Param("typeM")
 		metricsName := ctx.Param("nameM")
