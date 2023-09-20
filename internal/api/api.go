@@ -20,6 +20,7 @@ func New() *APIServer {
 	apiS := &APIServer{}
 	apiS.storage = storage.New()
 	apiS.echo = echo.New()
+	handler := handlers.New()
 	var address string
 	if envRunAddr := os.Getenv("ADDRESS"); envRunAddr != "" {
 		address = envRunAddr
@@ -29,9 +30,9 @@ func New() *APIServer {
 	}
 	apiS.addr = address
 
-	apiS.echo.GET("/", handlers.AllMetrics(apiS.storage))
-	apiS.echo.GET("/value/:typeM/:nameM", handlers.MetricsValue(apiS.storage))
-	apiS.echo.POST("/update/:typeM/:nameM/:valueM", handlers.PostWebhandle(apiS.storage))
+	apiS.echo.GET("/", handler.AllMetricsValues())
+	apiS.echo.GET("/value/:typeM/:nameM", handler.MetricsValue())
+	apiS.echo.POST("/update/:typeM/:nameM/:valueM", handler.PostWebhandle())
 
 	return apiS
 }
