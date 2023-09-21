@@ -6,27 +6,49 @@ import (
 	"strconv"
 )
 
-type Config struct {
+type ClientConfig struct {
 	PollInterval   int    `env:"POLL_INTERVAL"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
 	Addr           string `env:"ADDRESS"`
 }
 
-func GetParameters() Config {
-	var cfg Config
-	flag.StringVar(&cfg.Addr, "a", "localhost:8080", "address and port to run server")
-	flag.IntVar(&cfg.ReportInterval, "r", 10, "report interval in seconds")
-	flag.IntVar(&cfg.PollInterval, "p", 2, "poll interval in seconds")
-	flag.Parse()
+type ServerConfig struct {
+	Addr string `env:"ADDRESS"`
+}
 
+func (c *ClientConfig) New() ClientConfig {
+	cfg := &ClientConfig{}
+	c.parseFlags()
+	c.parseEnv()
+	return *cfg
+}
+
+func (c *ClientConfig) parseFlags() {
+	flag.StringVar(&c.Addr, "a", "localhost:8080", "address and port to run server")
+	flag.IntVar(&c.ReportInterval, "r", 10, "report interval in seconds")
+	flag.IntVar(&c.PollInterval, "p", 2, "poll interval in seconds")
+	flag.Parse()
+}
+
+func (c *ClientConfig) parseEnv() {
 	if envRunAddr := os.Getenv("ADDRESS"); envRunAddr != "" {
-		cfg.Addr = envRunAddr
+		c.Addr = envRunAddr
 	}
 	if envRunAddr := os.Getenv("REPORT_INTERVAL"); envRunAddr != "" {
-		cfg.ReportInterval, _ = strconv.Atoi(envRunAddr)
+		c.ReportInterval, _ = strconv.Atoi(envRunAddr)
 	}
 	if envRunAddr := os.Getenv("POLL_INTERVAL"); envRunAddr != "" {
-		cfg.PollInterval, _ = strconv.Atoi(envRunAddr)
+		c.PollInterval, _ = strconv.Atoi(envRunAddr)
 	}
-	return cfg
+}
+
+func (s *ServerConfig) New() ServerConfig {
+	cfg := &ServerConfig{}
+	if envRunAddr := os.Getenv("ADDRESS"); envRunAddr != "" {
+		s.Addr = envRunAddr
+	} else {
+		flag.StringVar(&s.Addr, "a", "localhost:8080", "address and port to run server")
+		flag.Parse()
+	}
+	return *cfg
 }

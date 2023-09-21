@@ -7,18 +7,18 @@ import (
 	"strconv"
 )
 
-type StorageUpdater interface {
+type storageUpdater interface {
 	UpdateCounter(string, int64)
 	UpdateGauge(string, float64)
 	GetValue(string, string) (string, int)
 	AllMetrics() string
 }
 
-type Handler struct {
-	stor StorageUpdater
+type handler struct {
+	stor storageUpdater
 }
 
-func PostWebhandle(s StorageUpdater) echo.HandlerFunc {
+func PostWebhandle(s storageUpdater) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		metricsType := ctx.Param("typeM")
 		metricsName := ctx.Param("nameM")
@@ -45,7 +45,7 @@ func PostWebhandle(s StorageUpdater) echo.HandlerFunc {
 	}
 }
 
-func MetricsValue(s StorageUpdater) echo.HandlerFunc {
+func MetricsValue(s storageUpdater) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		typeM := ctx.Param("typeM")
 		nameM := ctx.Param("nameM")
@@ -60,7 +60,7 @@ func MetricsValue(s StorageUpdater) echo.HandlerFunc {
 	}
 }
 
-func AllMetrics(s StorageUpdater) echo.HandlerFunc {
+func AllMetricsValues(s storageUpdater) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		err := ctx.String(http.StatusOK, s.AllMetrics())
 		if err != nil {

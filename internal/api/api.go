@@ -1,13 +1,12 @@
 package api
 
 import (
-	"flag"
 	"fmt"
 	"github.com/labstack/echo/v4"
+	"github.com/lionslon/go-yapmetrics/internal/config"
 	"github.com/lionslon/go-yapmetrics/internal/handlers"
 	"github.com/lionslon/go-yapmetrics/internal/storage"
 	"log"
-	"os"
 )
 
 type APIServer struct {
@@ -20,16 +19,11 @@ func New() *APIServer {
 	apiS := &APIServer{}
 	apiS.storage = storage.New()
 	apiS.echo = echo.New()
-	var address string
-	if envRunAddr := os.Getenv("ADDRESS"); envRunAddr != "" {
-		address = envRunAddr
-	} else {
-		flag.StringVar(&address, "a", "localhost:8080", "address and port to run server")
-		flag.Parse()
-	}
-	apiS.addr = address
+	cfg := config.ServerConfig{}
+	cfg.New()
+	apiS.addr = cfg.Addr
 
-	apiS.echo.GET("/", handlers.AllMetrics(apiS.storage))
+	apiS.echo.GET("/", handlers.AllMetricsValues(apiS.storage))
 	apiS.echo.GET("/value/:typeM/:nameM", handlers.MetricsValue(apiS.storage))
 	apiS.echo.POST("/update/:typeM/:nameM/:valueM", handlers.PostWebhandle(apiS.storage))
 
