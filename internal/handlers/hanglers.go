@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"github.com/labstack/echo/v4"
+	"github.com/lionslon/go-yapmetrics/internal/storage"
 	"net/http"
 	"strconv"
 )
@@ -15,10 +16,16 @@ type storageUpdater interface {
 }
 
 type handler struct {
-	stor storageUpdater
+	store storageUpdater
 }
 
-func PostWebhandle(s storageUpdater) echo.HandlerFunc {
+func New(stor *storage.MemStorage) *handler {
+	return &handler{
+		store: stor,
+	}
+}
+
+func (h *handler) PostWebhandle() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		metricsType := ctx.Param("typeM")
 		metricsName := ctx.Param("nameM")
@@ -26,13 +33,13 @@ func PostWebhandle(s storageUpdater) echo.HandlerFunc {
 
 		if metricsType == "counter" {
 			if value, err := strconv.ParseInt(metricsValue, 10, 64); err == nil {
-				s.UpdateCounter(metricsName, value)
+				h.store.UpdateCounter(metricsName, value)
 			} else {
 				return ctx.String(http.StatusBadRequest, fmt.Sprintf("%s cannot be converted to an integer", metricsValue))
 			}
 		} else if metricsType == "gauge" {
 			if value, err := strconv.ParseFloat(metricsValue, 64); err == nil {
-				s.UpdateGauge(metricsName, value)
+				h.store.UpdateGauge(metricsName, value)
 			} else {
 				return ctx.String(http.StatusBadRequest, fmt.Sprintf("%s cannot be converted to a float", metricsValue))
 			}
@@ -45,12 +52,12 @@ func PostWebhandle(s storageUpdater) echo.HandlerFunc {
 	}
 }
 
-func MetricsValue(s storageUpdater) echo.HandlerFunc {
+func (h *handler) MetricsValue() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		typeM := ctx.Param("typeM")
 		nameM := ctx.Param("nameM")
 
-		val, status := s.GetValue(typeM, nameM)
+		val, status := h.store.GetValue(typeM, nameM)
 		err := ctx.String(status, val)
 		if err != nil {
 			return err
@@ -60,9 +67,9 @@ func MetricsValue(s storageUpdater) echo.HandlerFunc {
 	}
 }
 
-func AllMetricsValues(s storageUpdater) echo.HandlerFunc {
+func (h *handler) AllMetricsValues() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
-		err := ctx.String(http.StatusOK, s.AllMetrics())
+		err := ctx.String(http.StatusOK, h.store.AllMetrics())
 		if err != nil {
 			return err
 		}
