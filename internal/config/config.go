@@ -18,19 +18,19 @@ type ServerConfig struct {
 
 func (c *ClientConfig) New() ClientConfig {
 	cfg := &ClientConfig{}
-	c.parseFlags()
-	c.parseEnv()
+	parseClientFlags(c)
+	parseClientEnv(c)
 	return *cfg
 }
 
-func (c *ClientConfig) parseFlags() {
+func parseClientFlags(c *ClientConfig) {
 	flag.StringVar(&c.Addr, "a", "localhost:8080", "address and port to run server")
 	flag.IntVar(&c.ReportInterval, "r", 10, "report interval in seconds")
 	flag.IntVar(&c.PollInterval, "p", 2, "poll interval in seconds")
 	flag.Parse()
 }
 
-func (c *ClientConfig) parseEnv() {
+func parseClientEnv(c *ClientConfig) {
 	if envRunAddr := os.Getenv("ADDRESS"); envRunAddr != "" {
 		c.Addr = envRunAddr
 	}
@@ -44,11 +44,18 @@ func (c *ClientConfig) parseEnv() {
 
 func (s *ServerConfig) New() ServerConfig {
 	cfg := &ServerConfig{}
+	parseServerFlags(s)
+	parseServerEnv(s)
+	return *cfg
+}
+
+func parseServerFlags(s *ServerConfig) {
+	flag.StringVar(&s.Addr, "a", "localhost:8080", "address and port to run server")
+	flag.Parse()
+}
+
+func parseServerEnv(s *ServerConfig) {
 	if envRunAddr := os.Getenv("ADDRESS"); envRunAddr != "" {
 		s.Addr = envRunAddr
-	} else {
-		flag.StringVar(&s.Addr, "a", "localhost:8080", "address and port to run server")
-		flag.Parse()
 	}
-	return *cfg
 }
