@@ -91,7 +91,7 @@ func WithLogging(sugar zap.SugaredLogger) echo.MiddlewareFunc {
 				ctx.Error(err)
 			}
 			duration := time.Since(start)
-
+			// logging
 			sugar.Infoln(
 				"uri:", req.RequestURI,
 				"method:", req.Method,
