@@ -80,6 +80,7 @@ func (h *handler) AllMetricsValues() echo.HandlerFunc {
 	}
 }
 
+
 func WithLogging(sugar zap.SugaredLogger) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) (err error) {
@@ -104,3 +105,4 @@ func WithLogging(sugar zap.SugaredLogger) echo.MiddlewareFunc {
 		}
 	}
 }
+

@@ -34,6 +34,7 @@ func New() *APIServer {
 	apiS.sugar = *logger.Sugar()
 
 	apiS.echo.Use(handlers.WithLogging(apiS.sugar))
+
 	apiS.echo.GET("/", handler.AllMetricsValues())
 	apiS.echo.GET("/value/:typeM/:nameM", handler.MetricsValue())
 	apiS.echo.POST("/update/:typeM/:nameM/:valueM", handler.PostWebhandle())
