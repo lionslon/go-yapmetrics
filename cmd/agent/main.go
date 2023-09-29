@@ -72,7 +72,7 @@ func getMetrics() {
 func post(mAddr string, mType string, mName string, mValue string) {
 	resp, err := http.Post(fmt.Sprintf("http://%s/update/%s/%s/%s", mAddr, mType, mName, mValue), "text/plain", bytes.NewReader([]byte{}))
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 	defer resp.Body.Close()
 }
