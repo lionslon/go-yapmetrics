@@ -55,3 +55,11 @@ func (s *MemStorage) AllMetrics() string {
 
 	return result
 }
+
+func (s *MemStorage) GetCounterValue(id string) int64 {
+	return int64(s.counterData[id])
+}
+
+func (s *MemStorage) GetGaugeValue(id string) float64 {
+	return float64(s.gaugeData[id])
+}
