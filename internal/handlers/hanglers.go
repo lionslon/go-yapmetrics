@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/labstack/echo/v4"
+	"github.com/lionslon/go-yapmetrics/internal/models"
 	"github.com/lionslon/go-yapmetrics/internal/storage"
 	"go.uber.org/zap"
 	"net/http"
@@ -119,7 +120,7 @@ func WithLogging(sugar zap.SugaredLogger) echo.MiddlewareFunc {
 
 func (h *handler) UpdateJSON() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
-		var metric Metrics
+		var metric models.Metrics
 		err := json.NewDecoder(ctx.Request().Body).Decode(&metric)
 		if err != nil {
 			return ctx.String(http.StatusBadRequest, fmt.Sprintf("Error in JSON decode: %s", err))
@@ -141,7 +142,7 @@ func (h *handler) UpdateJSON() echo.HandlerFunc {
 
 func (h *handler) GetValueJSON() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
-		var metric Metrics
+		var metric models.Metrics
 		err := json.NewDecoder(ctx.Request().Body).Decode(&metric)
 		if err != nil {
 			return ctx.String(http.StatusBadRequest, fmt.Sprintf("Error in JSON decode: %s", err))
