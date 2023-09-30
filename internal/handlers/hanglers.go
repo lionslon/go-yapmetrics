@@ -60,7 +60,7 @@ func (h *handler) PostWebhandle() echo.HandlerFunc {
 			return ctx.String(http.StatusBadRequest, "Invalid metric type. Can only be 'gauge' or 'counter'")
 		}
 
-		ctx.Response().Header().Set("Content-Type", "text/plain; charset=utf-8")
+		ctx.Response().Header().Set("Content-Type", "text/html; charset=utf-8")
 		return ctx.String(http.StatusOK, "")
 	}
 }
@@ -82,6 +82,7 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
 
 func (h *handler) AllMetricsValues() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
+		ctx.Response().Header().Set("Content-Type", "text/html")
 		err := ctx.String(http.StatusOK, h.store.AllMetrics())
 		if err != nil {
 			return err
