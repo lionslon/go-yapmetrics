@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/labstack/echo/v4"
+	"github.com/lionslon/go-yapmetrics/internal/models"
 	"github.com/lionslon/go-yapmetrics/internal/storage"
 	"go.uber.org/zap"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -60,7 +62,7 @@ func (h *handler) PostWebhandle() echo.HandlerFunc {
 			return ctx.String(http.StatusBadRequest, "Invalid metric type. Can only be 'gauge' or 'counter'")
 		}
 
-		ctx.Response().Header().Set("Content-Type", "text/plain; charset=utf-8")
+		ctx.Response().Header().Set("Content-Type", "text/html; charset=utf-8")
 		return ctx.String(http.StatusOK, "")
 	}
 }
@@ -82,6 +84,7 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
 
 func (h *handler) AllMetricsValues() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
+		ctx.Response().Header().Set("Content-Type", "text/html")
 		err := ctx.String(http.StatusOK, h.store.AllMetrics())
 		if err != nil {
 			return err
@@ -118,7 +121,8 @@ func WithLogging(sugar zap.SugaredLogger) echo.MiddlewareFunc {
 
 func (h *handler) UpdateJSON() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
-		var metric Metrics
+		var metric models.Metrics
+
 		err := json.NewDecoder(ctx.Request().Body).Decode(&metric)
 		if err != nil {
 			return ctx.String(http.StatusBadRequest, fmt.Sprintf("Error in JSON decode: %s", err))
@@ -140,7 +144,7 @@ func (h *handler) UpdateJSON() echo.HandlerFunc {
 
 func (h *handler) GetValueJSON() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
-		var metric Metrics
+		var metric models.Metrics
 		err := json.NewDecoder(ctx.Request().Body).Decode(&metric)
 		if err != nil {
 			return ctx.String(http.StatusBadRequest, fmt.Sprintf("Error in JSON decode: %s", err))
@@ -160,5 +164,34 @@ func (h *handler) GetValueJSON() echo.HandlerFunc {
 
 		ctx.Response().Header().Set("Content-Type", "application/json")
 		return ctx.JSON(http.StatusOK, metric)
+	}
+}
+
+func GzipUnpacking() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) (err error) {
+			req := ctx.Request()
+			rw := ctx.Response().Writer
+			header := req.Header
+			if strings.Contains(header.Get("Accept-Encoding"), "gzip") {
+				cw := newCompressWriter(rw)
+				ctx.Response().Writer = cw
+				defer cw.Close()
+			}
+
+			if strings.Contains(header.Get("Content-Encoding"), "gzip") {
+				cr, err := newCompressReader(req.Body)
+				if err != nil {
+					return ctx.String(http.StatusInternalServerError, "")
+				}
+				ctx.Request().Body = cr
+				defer cr.Close()
+			}
+			if err = next(ctx); err != nil {
+				ctx.Error(err)
+			}
+
+			return err
+		}
 	}
 }
