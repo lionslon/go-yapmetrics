@@ -20,7 +20,7 @@ func New() *APIServer {
 	apiS := &APIServer{}
 	apiS.echo = echo.New()
 	cfg := config.ServerConfig{}
-	st := storage.New()
+	st := storage.New(cfg.StoreInterval, cfg.FilePath, cfg.Restore)
 	handler := handlers.New(st)
 	cfg.New()
 	apiS.addr = cfg.Addr

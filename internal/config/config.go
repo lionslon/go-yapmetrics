@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"strconv"
 )
@@ -13,7 +14,10 @@ type ClientConfig struct {
 }
 
 type ServerConfig struct {
-	Addr string `env:"ADDRESS"`
+	Addr          string `env:"ADDRESS"`
+	StoreInterval int    `env:"STORE_INTERVAL"`
+	FilePath      string `env:"FILE_STORAGE_PATH"`
+	Restore       bool   `env:"RESTORE"`
 }
 
 func (c *ClientConfig) New() ClientConfig {
@@ -51,11 +55,31 @@ func (s *ServerConfig) New() ServerConfig {
 
 func parseServerFlags(s *ServerConfig) {
 	flag.StringVar(&s.Addr, "a", "localhost:8080", "address and port to run server")
+	flag.IntVar(&s.StoreInterval, "i", 300, "interval for saving metrics on the server")
+	flag.StringVar(&s.FilePath, "f", "/tmp/metrics-db.json", "file storage path for saving data")
+	flag.BoolVar(&s.Restore, "r", true, "need to load data at startup")
 	flag.Parse()
 }
 
 func parseServerEnv(s *ServerConfig) {
 	if envRunAddr := os.Getenv("ADDRESS"); envRunAddr != "" {
 		s.Addr = envRunAddr
+	}
+	if envValue := os.Getenv("STORE_INTERVAL"); envValue != "" {
+		value, err := strconv.Atoi(envValue)
+		if err != nil {
+			fmt.Println(err)
+		}
+		s.StoreInterval = value
+	}
+	if envValue := os.Getenv("FILE_STORAGE_PATH"); envValue != "" {
+		s.FilePath = envValue
+	}
+	if envValue := os.Getenv("RESTORE"); envValue != "" {
+		value, err := strconv.ParseBool(envValue)
+		if err != nil {
+			fmt.Println(err)
+		}
+		s.Restore = value
 	}
 }
