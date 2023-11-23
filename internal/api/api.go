@@ -11,9 +11,8 @@ import (
 )
 
 type APIServer struct {
-	echo  *echo.Echo
-	addr  string
-	sugar zap.SugaredLogger
+	echo *echo.Echo
+	addr string
 }
 
 func New() *APIServer {
@@ -31,9 +30,9 @@ func New() *APIServer {
 	}
 	defer logger.Sync()
 
-	apiS.sugar = *logger.Sugar()
+	sugar := *logger.Sugar()
 
-	apiS.echo.Use(handlers.WithLogging(apiS.sugar))
+	apiS.echo.Use(handlers.WithLogging(sugar))
 	apiS.echo.GET("/", handler.AllMetricsValues())
 	apiS.echo.POST("/value/", handler.GetValueJSON())
 	apiS.echo.GET("/value/:typeM/:nameM", handler.MetricsValue())
