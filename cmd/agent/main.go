@@ -72,24 +72,17 @@ func getMetrics() {
 
 func postQueries(cfg config.ClientConfig) {
 	url := fmt.Sprintf("http://%s/update/", cfg.Addr)
-	ro := grequests.RequestOptions{
-		Headers: map[string]string{
-			"content-type":     "application/json",
-			"content-encoding": "gzip",
-		},
-	}
-	session := grequests.NewSession(&ro)
 	for k, v := range valuesGauge {
-		postJSON(session, url, models.Metrics{ID: k, MType: "gauge", Value: &v})
+		postJSON(url, models.Metrics{ID: k, MType: "gauge", Value: &v})
 	}
 	pc := int64(pollCount)
-	postJSON(session, url, models.Metrics{ID: "PollCount", MType: "counter", Delta: &pc})
+	postJSON(url, models.Metrics{ID: "PollCount", MType: "counter", Delta: &pc})
 	r := rand.Float64()
-	postJSON(session, url, models.Metrics{ID: "RandomValue", MType: "gauge", Value: &r})
+	postJSON(url, models.Metrics{ID: "RandomValue", MType: "gauge", Value: &r})
 	pollCount = 0
 }
 
-func postJSON(s *grequests.Session, url string, m models.Metrics) {
+func postJSON(url string, m models.Metrics) {
 	js, err := json.Marshal(m)
 	if err != nil {
 		fmt.Println(err)
@@ -99,8 +92,12 @@ func postJSON(s *grequests.Session, url string, m models.Metrics) {
 	if err != nil {
 		fmt.Println(err)
 	}
-
-	s.Post(url, &grequests.RequestOptions{JSON: gz})
+	grequests.Post(url,
+		&grequests.RequestOptions{
+			Headers: map[string]string{
+				"content-type":     "application/json",
+				"content-encoding": "gzip",
+			}, JSON: gz})
 }
 
 func compress(b []byte) ([]byte, error) {

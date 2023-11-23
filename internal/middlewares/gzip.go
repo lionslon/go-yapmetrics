@@ -1,9 +1,11 @@
-package handlers
+package middlewares
 
 import (
 	"compress/gzip"
+	"github.com/labstack/echo/v4"
 	"io"
 	"net/http"
+	"strings"
 )
 
 // compressWriter реализует интерфейс http.ResponseWriter и позволяет прозрачно для сервера
@@ -68,4 +70,33 @@ func (c *compressReader) Close() error {
 		return err
 	}
 	return c.zr.Close()
+}
+
+func GzipUnpacking() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) (err error) {
+			req := ctx.Request()
+			rw := ctx.Response().Writer
+			header := req.Header
+			if strings.Contains(header.Get("Accept-Encoding"), "gzip") {
+				cw := newCompressWriter(rw)
+				ctx.Response().Writer = cw
+				defer cw.Close()
+			}
+
+			if strings.Contains(header.Get("Content-Encoding"), "gzip") {
+				cr, err := newCompressReader(req.Body)
+				if err != nil {
+					return ctx.String(http.StatusInternalServerError, "")
+				}
+				ctx.Request().Body = cr
+				defer cr.Close()
+			}
+			if err = next(ctx); err != nil {
+				ctx.Error(err)
+			}
+
+			return err
+		}
+	}
 }
