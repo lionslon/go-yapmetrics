@@ -29,7 +29,7 @@ func New(stor *storage.MemStorage) *handler {
 	}
 }
 
-func (h *handler) PostWebhandle() echo.HandlerFunc {
+func (h *handler) UpdateMetrics() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		metricsType := ctx.Param("typeM")
 		metricsName := ctx.Param("nameM")

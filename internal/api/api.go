@@ -51,7 +51,7 @@ func New() *APIServer {
 	apiS.echo.POST("/value/", handler.GetValueJSON())
 	apiS.echo.GET("/value/:typeM/:nameM", handler.MetricsValue())
 	apiS.echo.POST("/update/", handler.UpdateJSON())
-	apiS.echo.POST("/update/:typeM/:nameM/:valueM", handler.PostWebhandle())
+	apiS.echo.POST("/update/:typeM/:nameM/:valueM", handler.UpdateMetrics())
 
 	return apiS
 }
