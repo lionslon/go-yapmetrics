@@ -2,7 +2,7 @@ package storing
 
 import (
 	"encoding/json"
-	"fmt"
+	"go.uber.org/zap"
 	"os"
 	"path"
 	"time"
@@ -13,12 +13,12 @@ import (
 func Restore(s *storage.MemStorage, filePath string) {
 	file, err := os.ReadFile(filePath)
 	if err != nil {
-		fmt.Println(err)
+		zap.S().Error(err)
 	}
 
 	var data storage.AllMetrics
 	if err := json.Unmarshal(file, &data); err != nil {
-		fmt.Println(err)
+		zap.S().Error(err)
 	}
 
 	if len(data.Counter) != 0 {
@@ -29,12 +29,12 @@ func Restore(s *storage.MemStorage, filePath string) {
 	}
 }
 
-func Store(s *storage.MemStorage, filePath string, storeInterval int) {
+func IntervalDump(s *storage.MemStorage, filePath string, storeInterval int) {
 	dir, _ := path.Split(filePath)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err := os.MkdirAll(dir, 0666)
 		if err != nil {
-			fmt.Println(err)
+			zap.S().Error(err)
 		}
 	}
 	pollTicker := time.NewTicker(time.Duration(storeInterval) * time.Second)
@@ -42,7 +42,7 @@ func Store(s *storage.MemStorage, filePath string, storeInterval int) {
 	for range pollTicker.C {
 		err := dump(s, filePath)
 		if err != nil {
-			fmt.Println(err)
+			zap.S().Error(err)
 		}
 	}
 }

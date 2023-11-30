@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/lionslon/go-yapmetrics/internal/config"
 	"github.com/lionslon/go-yapmetrics/internal/handlers"
@@ -14,37 +13,22 @@ import (
 
 type APIServer struct {
 	echo *echo.Echo
-	addr string
+	st   *storage.MemStorage
 	//sugar zap.SugaredLogger
 }
 
 func New() *APIServer {
 	apiS := &APIServer{}
 	apiS.echo = echo.New()
-	cfg := config.ServerConfig{}
-	st := storage.New()
-	handler := handlers.New(st)
-	cfg.New()
-	apiS.addr = cfg.Addr
+	apiS.st = storage.New()
+	handler := handlers.New(apiS.st)
 
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		panic(err)
-	}
+	logger, _ := zap.NewDevelopment()
+	zap.ReplaceGlobals(logger)
+
 	defer logger.Sync()
 
-	sugar := *logger.Sugar()
-
-	if cfg.FilePath != "" {
-		if cfg.Restore {
-			storing.Restore(st, cfg.FilePath)
-		}
-		if cfg.StoreInterval != 0 {
-			go storing.Store(st, cfg.FilePath, cfg.StoreInterval)
-		}
-	}
-
-	apiS.echo.Use(middlewares.WithLogging(sugar))
+	apiS.echo.Use(middlewares.WithLogging())
 	apiS.echo.Use(middlewares.GzipUnpacking())
 
 	apiS.echo.GET("/", handler.AllMetricsValues())
@@ -57,8 +41,19 @@ func New() *APIServer {
 }
 
 func (a *APIServer) Start() error {
-	fmt.Println("Running server on", a.addr)
-	err := a.echo.Start(a.addr)
+	cfg := config.ServerConfig{}
+	cfg.New()
+
+	if cfg.FilePath != "" {
+		if cfg.Restore {
+			storing.Restore(a.st, cfg.FilePath)
+		}
+		if cfg.StoreInterval != 0 {
+			go storing.IntervalDump(a.st, cfg.FilePath, cfg.StoreInterval)
+		}
+	}
+
+	err := a.echo.Start(cfg.Addr)
 	if err != nil {
 		log.Fatal(err)
 	}

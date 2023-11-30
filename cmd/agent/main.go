@@ -8,6 +8,7 @@ import (
 	"github.com/levigross/grequests"
 	"github.com/lionslon/go-yapmetrics/internal/config"
 	"github.com/lionslon/go-yapmetrics/internal/models"
+	"go.uber.org/zap"
 	"math/rand"
 	"runtime"
 	"time"
@@ -85,12 +86,12 @@ func postQueries(cfg config.ClientConfig) {
 func postJSON(url string, m models.Metrics) {
 	js, err := json.Marshal(m)
 	if err != nil {
-		fmt.Println(err)
+		zap.S().Error(err)
 	}
 
 	gz, err := compress(js)
 	if err != nil {
-		fmt.Println(err)
+		zap.S().Error(err)
 	}
 	grequests.Post(url,
 		&grequests.RequestOptions{
