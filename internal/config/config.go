@@ -55,5 +55,6 @@ func parseServerFlags(s *ServerConfig) {
 	flag.StringVar(&s.FilePath, "f", "/tmp/metrics-db.json", "file storage path for saving data")
 	flag.BoolVar(&s.Restore, "r", true, "need to load data at startup")
 	flag.StringVar(&s.DbDSN, "d", "", "Database Data Source Name")
+
 	flag.Parse()
 }
