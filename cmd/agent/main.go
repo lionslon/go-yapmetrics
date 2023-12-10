@@ -2,12 +2,15 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
+	"encoding/json"
 	"fmt"
+	"github.com/levigross/grequests"
 	"github.com/lionslon/go-yapmetrics/internal/config"
+	"github.com/lionslon/go-yapmetrics/internal/models"
+	"go.uber.org/zap"
 	"math/rand"
-	"net/http"
 	"runtime"
-	"strconv"
 	"time"
 )
 
@@ -19,19 +22,18 @@ func main() {
 	cfg := config.ClientConfig{}
 	cfg.New()
 
-	go getMetrics()
-
-	time.Sleep(time.Duration(cfg.ReportInterval) * time.Second)
+	pollTicker := time.NewTicker(time.Duration(cfg.PollInterval) * time.Second)
+	defer pollTicker.Stop()
+	reportTicker := time.NewTicker(time.Duration(cfg.ReportInterval) * time.Second)
+	defer reportTicker.Stop()
 
 	for {
-		for k, v := range valuesGauge {
-			post(cfg.Addr, "gauge", k, strconv.FormatFloat(v, 'f', -1, 64))
+		select {
+		case <-pollTicker.C:
+			getMetrics()
+		case <-reportTicker.C:
+			postQueries(cfg)
 		}
-		fmt.Println(pollCount)
-		post(cfg.Addr, "counter", "PollCount", strconv.FormatUint(pollCount, 10))
-		post(cfg.Addr, "gauge", "RandomValue", strconv.FormatFloat(rand.Float64(), 'f', -1, 64))
-		pollCount = 0
-		time.Sleep(time.Duration(cfg.ReportInterval) * time.Second)
 	}
 }
 
@@ -69,10 +71,46 @@ func getMetrics() {
 	valuesGauge["TotalAlloc"] = float64(rtm.TotalAlloc)
 }
 
-func post(mAddr string, mType string, mName string, mValue string) {
-	resp, err := http.Post(fmt.Sprintf("http://%s/update/%s/%s/%s", mAddr, mType, mName, mValue), "text/plain", bytes.NewReader([]byte{}))
-	if err != nil {
-		panic(err)
+func postQueries(cfg config.ClientConfig) {
+	url := fmt.Sprintf("http://%s/update/", cfg.Addr)
+	for k, v := range valuesGauge {
+		postJSON(url, models.Metrics{ID: k, MType: "gauge", Value: &v})
 	}
-	defer resp.Body.Close()
+	pc := int64(pollCount)
+	postJSON(url, models.Metrics{ID: "PollCount", MType: "counter", Delta: &pc})
+	r := rand.Float64()
+	postJSON(url, models.Metrics{ID: "RandomValue", MType: "gauge", Value: &r})
+	pollCount = 0
+}
+
+func postJSON(url string, m models.Metrics) {
+	js, err := json.Marshal(m)
+	if err != nil {
+		zap.S().Error(err)
+	}
+
+	gz, err := compress(js)
+	if err != nil {
+		zap.S().Error(err)
+	}
+	grequests.Post(url,
+		&grequests.RequestOptions{
+			Headers: map[string]string{
+				"content-type":     "application/json",
+				"content-encoding": "gzip",
+			}, JSON: gz})
+}
+
+func compress(b []byte) ([]byte, error) {
+	var bf bytes.Buffer
+	gz, err := gzip.NewWriterLevel(&bf, gzip.BestSpeed)
+	if err != nil {
+		return nil, err
+	}
+	_, err = gz.Write(b)
+	if err != nil {
+		return nil, err
+	}
+	gz.Close()
+	return bf.Bytes(), nil
 }

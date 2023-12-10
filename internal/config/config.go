@@ -2,8 +2,8 @@ package config
 
 import (
 	"flag"
-	"os"
-	"strconv"
+	"github.com/caarlos0/env"
+	"go.uber.org/zap"
 )
 
 type ClientConfig struct {
@@ -13,13 +13,20 @@ type ClientConfig struct {
 }
 
 type ServerConfig struct {
-	Addr string `env:"ADDRESS"`
+	Addr          string `env:"ADDRESS"`
+	StoreInterval int    `env:"STORE_INTERVAL"`
+	FilePath      string `env:"FILE_STORAGE_PATH"`
+	Restore       bool   `env:"RESTORE"`
 }
 
 func (c *ClientConfig) New() ClientConfig {
 	cfg := &ClientConfig{}
 	parseClientFlags(c)
-	parseClientEnv(c)
+	err := env.Parse(c)
+
+	if err != nil {
+		zap.S().Error(err)
+	}
 	return *cfg
 }
 
@@ -30,32 +37,21 @@ func parseClientFlags(c *ClientConfig) {
 	flag.Parse()
 }
 
-func parseClientEnv(c *ClientConfig) {
-	if envRunAddr := os.Getenv("ADDRESS"); envRunAddr != "" {
-		c.Addr = envRunAddr
-	}
-	if envRunAddr := os.Getenv("REPORT_INTERVAL"); envRunAddr != "" {
-		c.ReportInterval, _ = strconv.Atoi(envRunAddr)
-	}
-	if envRunAddr := os.Getenv("POLL_INTERVAL"); envRunAddr != "" {
-		c.PollInterval, _ = strconv.Atoi(envRunAddr)
-	}
-}
-
 func (s *ServerConfig) New() ServerConfig {
 	cfg := &ServerConfig{}
 	parseServerFlags(s)
-	parseServerEnv(s)
+	err := env.Parse(s)
+
+	if err != nil {
+		zap.S().Error(err)
+	}
 	return *cfg
 }
 
 func parseServerFlags(s *ServerConfig) {
 	flag.StringVar(&s.Addr, "a", "localhost:8080", "address and port to run server")
+	flag.IntVar(&s.StoreInterval, "i", 300, "interval for saving metrics on the server")
+	flag.StringVar(&s.FilePath, "f", "/tmp/metrics-db.json", "file storage path for saving data")
+	flag.BoolVar(&s.Restore, "r", true, "need to load data at startup")
 	flag.Parse()
-}
-
-func parseServerEnv(s *ServerConfig) {
-	if envRunAddr := os.Getenv("ADDRESS"); envRunAddr != "" {
-		s.Addr = envRunAddr
-	}
 }
