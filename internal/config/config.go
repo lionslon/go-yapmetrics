@@ -38,7 +38,7 @@ func parseClientFlags(c *ClientConfig) {
 	flag.Parse()
 }
 
-func (s *ServerConfig) New() ServerConfig {
+func (s *ServerConfig) New() *ServerConfig {
 	cfg := &ServerConfig{}
 	parseServerFlags(s)
 	err := env.Parse(s)
@@ -46,7 +46,7 @@ func (s *ServerConfig) New() ServerConfig {
 	if err != nil {
 		zap.S().Error(err)
 	}
-	return *cfg
+	return cfg
 }
 
 func parseServerFlags(s *ServerConfig) {

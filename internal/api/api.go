@@ -13,7 +13,7 @@ import (
 )
 
 type APIServer struct {
-	cfg  config.ServerConfig
+	addr string
 	echo *echo.Echo
 	st   *storage.MemStorage
 	db   *database.DBConnection
@@ -22,11 +22,21 @@ type APIServer struct {
 func New() *APIServer {
 	apiS := &APIServer{}
 	cfg := config.ServerConfig{}
-	apiS.cfg = cfg.New()
+	cfg.New()
+	apiS.addr = cfg.Addr
 	apiS.echo = echo.New()
 	apiS.st = storage.New()
+	apiS.db = database.New(cfg.DatabaseDSN)
 	handler := handlers.New(apiS.st)
-	apiS.db = database.New(apiS.cfg.DatabaseDSN)
+
+	if cfg.FilePath != "" {
+		if cfg.Restore {
+			storing.Restore(apiS.st, cfg.FilePath)
+		}
+		if cfg.StoreInterval != 0 {
+			go storing.IntervalDump(apiS.st, cfg.FilePath, cfg.StoreInterval)
+		}
+	}
 
 	logger, _ := zap.NewDevelopment()
 	zap.ReplaceGlobals(logger)
@@ -47,16 +57,7 @@ func New() *APIServer {
 }
 
 func (a *APIServer) Start() error {
-	if a.cfg.FilePath != "" {
-		if a.cfg.Restore {
-			storing.Restore(a.st, a.cfg.FilePath)
-		}
-		if a.cfg.StoreInterval != 0 {
-			go storing.IntervalDump(a.st, a.cfg.FilePath, a.cfg.StoreInterval)
-		}
-	}
-
-	err := a.echo.Start(a.cfg.Addr)
+	err := a.echo.Start(a.addr)
 	if err != nil {
 		log.Fatal(err)
 	}
