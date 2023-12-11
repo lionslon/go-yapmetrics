@@ -29,7 +29,12 @@ func New() *APIServer {
 	apiS.db = database.New(cfg.DatabaseDSN)
 	handler := handlers.New(apiS.st)
 
-	if cfg.FilePath != "" {
+	if apiS.db.DB != nil {
+		database.Restore(apiS.st, apiS.db)
+		if cfg.StoreInterval != 0 {
+			go database.Dump(apiS.st, apiS.db, cfg.StoreInterval)
+		}
+	} else if cfg.FilePath != "" {
 		if cfg.Restore {
 			storing.Restore(apiS.st, cfg.FilePath)
 		}
