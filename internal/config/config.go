@@ -17,6 +17,7 @@ type ServerConfig struct {
 	StoreInterval int    `env:"STORE_INTERVAL"`
 	FilePath      string `env:"FILE_STORAGE_PATH"`
 	Restore       bool   `env:"RESTORE"`
+	DatabaseDSN   string `env:"DATABASE_DSN"`
 }
 
 func (c *ClientConfig) New() ClientConfig {
@@ -37,7 +38,7 @@ func parseClientFlags(c *ClientConfig) {
 	flag.Parse()
 }
 
-func (s *ServerConfig) New() ServerConfig {
+func (s *ServerConfig) New() *ServerConfig {
 	cfg := &ServerConfig{}
 	parseServerFlags(s)
 	err := env.Parse(s)
@@ -45,7 +46,7 @@ func (s *ServerConfig) New() ServerConfig {
 	if err != nil {
 		zap.S().Error(err)
 	}
-	return *cfg
+	return cfg
 }
 
 func parseServerFlags(s *ServerConfig) {
@@ -53,5 +54,7 @@ func parseServerFlags(s *ServerConfig) {
 	flag.IntVar(&s.StoreInterval, "i", 300, "interval for saving metrics on the server")
 	flag.StringVar(&s.FilePath, "f", "/tmp/metrics-db.json", "file storage path for saving data")
 	flag.BoolVar(&s.Restore, "r", true, "need to load data at startup")
+	flag.StringVar(&s.DatabaseDSN, "d", "", "Database Data Source Name")
+
 	flag.Parse()
 }
