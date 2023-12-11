@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/labstack/echo/v4"
 	"github.com/lionslon/go-yapmetrics/internal/config"
+	"github.com/lionslon/go-yapmetrics/internal/database"
 	"github.com/lionslon/go-yapmetrics/internal/handlers"
 	"github.com/lionslon/go-yapmetrics/internal/middlewares"
 	"github.com/lionslon/go-yapmetrics/internal/storage"
@@ -12,16 +13,35 @@ import (
 )
 
 type APIServer struct {
+	addr string
 	echo *echo.Echo
 	st   *storage.MemStorage
-	//sugar zap.SugaredLogger
+	db   *database.DBConnection
 }
 
 func New() *APIServer {
 	apiS := &APIServer{}
+	cfg := config.ServerConfig{}
+	cfg.New()
+	apiS.addr = cfg.Addr
 	apiS.echo = echo.New()
 	apiS.st = storage.New()
+	apiS.db = database.New(cfg.DatabaseDSN)
 	handler := handlers.New(apiS.st)
+
+	if apiS.db.DB != nil {
+		database.Restore(apiS.st, apiS.db)
+		if cfg.StoreInterval != 0 {
+			go database.Dump(apiS.st, apiS.db, cfg.StoreInterval)
+		}
+	} else if cfg.FilePath != "" {
+		if cfg.Restore {
+			storing.Restore(apiS.st, cfg.FilePath)
+		}
+		if cfg.StoreInterval != 0 {
+			go storing.IntervalDump(apiS.st, cfg.FilePath, cfg.StoreInterval)
+		}
+	}
 
 	logger, _ := zap.NewDevelopment()
 	zap.ReplaceGlobals(logger)
@@ -36,24 +56,14 @@ func New() *APIServer {
 	apiS.echo.GET("/value/:typeM/:nameM", handler.MetricsValue())
 	apiS.echo.POST("/update/", handler.UpdateJSON())
 	apiS.echo.POST("/update/:typeM/:nameM/:valueM", handler.UpdateMetrics())
+	apiS.echo.POST("/updates/", handler.UpdatesJSON())
+	apiS.echo.GET("/ping", handler.PingDB(apiS.db))
 
 	return apiS
 }
 
 func (a *APIServer) Start() error {
-	cfg := config.ServerConfig{}
-	cfg.New()
-
-	if cfg.FilePath != "" {
-		if cfg.Restore {
-			storing.Restore(a.st, cfg.FilePath)
-		}
-		if cfg.StoreInterval != 0 {
-			go storing.IntervalDump(a.st, cfg.FilePath, cfg.StoreInterval)
-		}
-	}
-
-	err := a.echo.Start(cfg.Addr)
+	err := a.echo.Start(a.addr)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"github.com/lionslon/go-yapmetrics/internal/models"
 	"net/http"
 )
 
@@ -85,4 +86,16 @@ func (s *MemStorage) UpdateGaugeData(gaugeData map[string]gauge) {
 
 func (s *MemStorage) UpdateCounterData(counterData map[string]counter) {
 	s.counterData = counterData
+}
+
+func (s *MemStorage) StoreBatch(metrics []models.Metrics) {
+	for _, m := range metrics {
+		switch m.MType {
+		case "counter":
+			s.UpdateCounter(m.ID, *m.Delta)
+		case "gauge":
+			s.UpdateGauge(m.ID, *m.Value)
+		}
+
+	}
 }
