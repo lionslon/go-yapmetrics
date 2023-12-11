@@ -18,6 +18,7 @@ type storageUpdater interface {
 	AllMetrics() string
 	GetCounterValue(string) int64
 	GetGaugeValue(string) float64
+	StoreBatch([]models.Metrics)
 }
 
 type handler struct {
@@ -148,5 +149,19 @@ func (h *handler) PingDB(db *database.DBConnection) echo.HandlerFunc {
 		}
 
 		return nil
+	}
+}
+
+func (h *handler) UpdatesJSON() echo.HandlerFunc {
+	return func(ctx echo.Context) error {
+		metrics := make([]models.Metrics, 0)
+		err := json.NewDecoder(ctx.Request().Body).Decode(&metrics)
+		if err != nil {
+			return ctx.String(http.StatusBadRequest, fmt.Sprintf("Error in JSON decode: %s", err))
+		}
+		h.store.StoreBatch(metrics)
+
+		ctx.Response().Header().Set("Content-Type", "application/json")
+		return ctx.JSON(http.StatusOK, metrics)
 	}
 }

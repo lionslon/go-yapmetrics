@@ -56,6 +56,7 @@ func New() *APIServer {
 	apiS.echo.GET("/value/:typeM/:nameM", handler.MetricsValue())
 	apiS.echo.POST("/update/", handler.UpdateJSON())
 	apiS.echo.POST("/update/:typeM/:nameM/:valueM", handler.UpdateMetrics())
+	apiS.echo.POST("/updates/", handler.UpdatesJSON())
 	apiS.echo.GET("/ping", handler.PingDB(apiS.db))
 
 	return apiS
