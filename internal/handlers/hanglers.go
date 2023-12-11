@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/lionslon/go-yapmetrics/internal/database"
 	"github.com/lionslon/go-yapmetrics/internal/models"
 	"github.com/lionslon/go-yapmetrics/internal/storage"
+	"io"
 	"net/http"
 	"strconv"
 )
@@ -156,12 +158,11 @@ func (h *handler) UpdatesJSON() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		metrics := make([]models.Metrics, 0)
 		err := json.NewDecoder(ctx.Request().Body).Decode(&metrics)
-		if err != nil {
+		if err != nil && !errors.Is(err, io.EOF) {
 			return ctx.String(http.StatusBadRequest, fmt.Sprintf("Error in JSON decode: %s", err))
 		}
 		h.store.StoreBatch(metrics)
 
-		ctx.Response().Header().Set("Content-Type", "application/json")
-		return ctx.JSON(http.StatusOK, metrics)
+		return ctx.NoContent(http.StatusOK)
 	}
 }
