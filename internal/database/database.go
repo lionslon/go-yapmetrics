@@ -2,18 +2,16 @@ package database
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
-	"go.uber.org/zap"
-	"time"
-
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jmoiron/sqlx"
 	"github.com/lionslon/go-yapmetrics/internal/storage"
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
+	"time"
 )
 
 type DBConnection struct {
-	DB *sql.DB
+	DB *sqlx.DB
 }
 
 type counterMetric struct {
@@ -34,7 +32,7 @@ func New(dsn string) *DBConnection {
 		return dbc
 	}
 
-	db, err := sql.Open("pgx", dsn)
+	db, err := sqlx.Open("postgres", dsn)
 	if err != nil {
 		zap.S().Error(err)
 		dbc.DB = nil
@@ -44,8 +42,8 @@ func New(dsn string) *DBConnection {
 	}
 
 	if dbc.DB != nil {
-		dbc.DB.Exec("CREATE TABLE IF NOT EXISTS counter_metrics (name char(30) UNIQUE, value integer);")
-		dbc.DB.Exec("CREATE TABLE IF NOT EXISTS gauge_metrics (name char(30) UNIQUE, value double precision);")
+		dbc.DB.MustExec("CREATE TABLE IF NOT EXISTS counter_metrics (name char(30) UNIQUE, value integer);")
+		dbc.DB.MustExec("CREATE TABLE IF NOT EXISTS gauge_metrics (name char(30) UNIQUE, value double precision);")
 	}
 	return dbc
 }
@@ -113,24 +111,16 @@ func Dump(s *storage.MemStorage, dbc *DBConnection, storeInterval int) {
 }
 
 func saveMetrics(s *storage.MemStorage, dbc *DBConnection) error {
-	tx, err := dbc.DB.Begin()
-	if err != nil {
-		return err
-	}
-	var query string
-	query = "TRUNCATE counter_metrics, gauge_metrics; "
+	tx := dbc.DB.MustBegin()
+
+	tx.MustExec("TRUNCATE counter_metrics, gauge_metrics; ")
 	for k, v := range s.GetCounterData() {
-		query += fmt.Sprintf("INSERT INTO counter_metrics (name, value) VALUES ('%s', %d); ", k, v)
+		tx.MustExec("INSERT INTO counter_metrics (name, value) VALUES (?, ?); ", k, v)
 	}
 
 	for k, v := range s.GetGaugeData() {
-		query += fmt.Sprintf("INSERT INTO gauge_metrics (name, value) VALUES ('%s', %f); ", k, v)
+		tx.MustExec("INSERT INTO gauge_metrics (name, value) VALUES (?, ?); ", k, v)
 	}
 
-	_, err = tx.Exec(query)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
 	return tx.Commit()
 }

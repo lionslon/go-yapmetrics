@@ -60,15 +60,9 @@ func parseServerFlags(s *ServerConfig) {
 }
 
 func (s *ServerConfig) FileProvided() bool {
-	if s.FilePath == "" {
-		return false
-	}
-	return true
+	return s.FilePath != ""
 }
 
 func (s *ServerConfig) StoreIntervalNotZero() bool {
-	if s.StoreInterval == 0 {
-		return false
-	}
-	return true
+	return s.StoreInterval != 0
 }
