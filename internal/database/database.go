@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	"github.com/lionslon/go-yapmetrics/internal/storage"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
