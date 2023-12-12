@@ -116,11 +116,11 @@ func saveMetrics(s *storage.MemStorage, dbc *DBConnection) error {
 
 	tx.MustExec("TRUNCATE counter_metrics, gauge_metrics; ")
 	for k, v := range s.GetCounterData() {
-		tx.MustExec("INSERT INTO counter_metrics (name, value) VALUES (?, ?); ", k, v)
+		tx.MustExec("INSERT INTO counter_metrics (name, value) VALUES ($1, $2); ", k, v)
 	}
 
 	for k, v := range s.GetGaugeData() {
-		tx.MustExec("INSERT INTO gauge_metrics (name, value) VALUES (?, ?); ", k, v)
+		tx.MustExec("INSERT INTO gauge_metrics (name, value) VALUES ($1, $2); ", k, v)
 	}
 
 	return tx.Commit()
