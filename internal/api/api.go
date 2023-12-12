@@ -13,7 +13,7 @@ import (
 )
 
 type APIServer struct {
-	addr string
+	cfg  *config.ServerConfig
 	echo *echo.Echo
 	st   *storage.MemStorage
 	db   *database.DBConnection
@@ -21,9 +21,8 @@ type APIServer struct {
 
 func New() *APIServer {
 	apiS := &APIServer{}
-	cfg := config.ServerConfig{}
-	cfg.New()
-	apiS.addr = cfg.Addr
+	cfg := config.NewServer()
+	apiS.cfg = cfg
 	apiS.echo = echo.New()
 	apiS.st = storage.New()
 	apiS.db = database.New(cfg.DatabaseDSN)
@@ -31,14 +30,14 @@ func New() *APIServer {
 
 	if apiS.db.DB != nil {
 		database.Restore(apiS.st, apiS.db)
-		if cfg.StoreInterval != 0 {
+		if cfg.StoreIntervalNotZero() {
 			go database.Dump(apiS.st, apiS.db, cfg.StoreInterval)
 		}
-	} else if cfg.FilePath != "" {
+	} else if cfg.FileProvided() {
 		if cfg.Restore {
 			storing.Restore(apiS.st, cfg.FilePath)
 		}
-		if cfg.StoreInterval != 0 {
+		if cfg.StoreIntervalNotZero() {
 			go storing.IntervalDump(apiS.st, cfg.FilePath, cfg.StoreInterval)
 		}
 	}
@@ -63,7 +62,7 @@ func New() *APIServer {
 }
 
 func (a *APIServer) Start() error {
-	err := a.echo.Start(a.addr)
+	err := a.echo.Start(a.cfg.Addr)
 	if err != nil {
 		log.Fatal(err)
 	}

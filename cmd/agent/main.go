@@ -19,8 +19,7 @@ var pollCount uint64
 
 func main() {
 
-	cfg := config.ClientConfig{}
-	cfg.New()
+	cfg := config.NewClient()
 
 	pollTicker := time.NewTicker(time.Duration(cfg.PollInterval) * time.Second)
 	defer pollTicker.Stop()
@@ -71,7 +70,7 @@ func getMetrics() {
 	valuesGauge["TotalAlloc"] = float64(rtm.TotalAlloc)
 }
 
-func postQueries(cfg config.ClientConfig) {
+func postQueries(cfg *config.ClientConfig) {
 	url := fmt.Sprintf("http://%s/update/", cfg.Addr)
 	client := retryablehttp.NewClient()
 	client.RetryMax = 3

@@ -20,15 +20,15 @@ type ServerConfig struct {
 	DatabaseDSN   string `env:"DATABASE_DSN"`
 }
 
-func (c *ClientConfig) New() ClientConfig {
+func NewClient() *ClientConfig {
 	cfg := &ClientConfig{}
-	parseClientFlags(c)
-	err := env.Parse(c)
+	parseClientFlags(cfg)
+	err := env.Parse(cfg)
 
 	if err != nil {
 		zap.S().Error(err)
 	}
-	return *cfg
+	return cfg
 }
 
 func parseClientFlags(c *ClientConfig) {
@@ -38,10 +38,10 @@ func parseClientFlags(c *ClientConfig) {
 	flag.Parse()
 }
 
-func (s *ServerConfig) New() *ServerConfig {
+func NewServer() *ServerConfig {
 	cfg := &ServerConfig{}
-	parseServerFlags(s)
-	err := env.Parse(s)
+	parseServerFlags(cfg)
+	err := env.Parse(cfg)
 
 	if err != nil {
 		zap.S().Error(err)
@@ -57,4 +57,18 @@ func parseServerFlags(s *ServerConfig) {
 	flag.StringVar(&s.DatabaseDSN, "d", "", "Database Data Source Name")
 
 	flag.Parse()
+}
+
+func (s *ServerConfig) FileProvided() bool {
+	if s.FilePath == "" {
+		return false
+	}
+	return true
+}
+
+func (s *ServerConfig) StoreIntervalNotZero() bool {
+	if s.StoreInterval == 0 {
+		return false
+	}
+	return true
 }
