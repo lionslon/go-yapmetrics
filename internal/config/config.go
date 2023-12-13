@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"github.com/caarlos0/env"
+	"github.com/lionslon/go-yapmetrics/internal/storage"
 	"go.uber.org/zap"
 )
 
@@ -59,10 +60,16 @@ func parseServerFlags(s *ServerConfig) {
 	flag.Parse()
 }
 
-func (s *ServerConfig) FileProvided() bool {
-	return s.FilePath != ""
-}
-
 func (s *ServerConfig) StoreIntervalNotZero() bool {
 	return s.StoreInterval != 0
+}
+
+func (s *ServerConfig) GetProvider() storage.StorageProvider {
+	if s.FilePath != "" {
+		return storage.FileProvider
+	}
+	if s.DatabaseDSN != "" {
+		return storage.DBProvider
+	}
+	return 0
 }

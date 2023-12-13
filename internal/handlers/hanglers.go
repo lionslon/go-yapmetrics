@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/labstack/echo/v4"
-	"github.com/lionslon/go-yapmetrics/internal/database"
 	"github.com/lionslon/go-yapmetrics/internal/models"
 	"github.com/lionslon/go-yapmetrics/internal/storage"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"strconv"
@@ -136,14 +136,14 @@ func (h *handler) GetValueJSON() echo.HandlerFunc {
 	}
 }
 
-func (h *handler) PingDB(db *database.DBConnection) echo.HandlerFunc {
+func (h *handler) PingDB(err error) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		ctx.Response().Header().Set("Content-Type", "text/html")
-		err := database.CheckConnection(db)
 		if err == nil {
 			err = ctx.String(http.StatusOK, "Connection database is OK")
 		} else {
-			err = ctx.String(http.StatusInternalServerError, "Connection database is OK")
+			zap.S().Error("Connection database is NOT OK")
+			err = ctx.String(http.StatusInternalServerError, "Connection database is NOT OK")
 		}
 
 		if err != nil {

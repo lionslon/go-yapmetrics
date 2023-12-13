@@ -1,11 +1,10 @@
-package database
+package storage
 
 import (
 	"context"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"github.com/lionslon/go-yapmetrics/internal/storage"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"time"
@@ -25,53 +24,42 @@ type gaugeMetric struct {
 	value float64
 }
 
-func New(dsn string) *DBConnection {
-	dbc := &DBConnection{}
+type dbProvider struct {
+	st            *MemStorage
+	DB            *sqlx.DB
+	storeInterval int
+}
 
-	if dsn == "" {
-		dbc.DB = nil
-		return dbc
+func NewDBProvider(dsn string, storeInterval int, m *MemStorage) (StorageWorker, error) {
+	var err error
+	dbc := &dbProvider{
+		st:            m,
+		storeInterval: storeInterval,
 	}
 
-	db, err := sqlx.Open("postgres", dsn)
+	if dsn == "" {
+		return dbc, errors.New("Empty dsn string")
+	}
+	dbc.DB, err = sqlx.Open("postgres", dsn)
 	if err != nil {
-		zap.S().Error(err)
-		dbc.DB = nil
-		return dbc
-	} else {
-		dbc.DB = db
+		return dbc, err
 	}
 
 	if dbc.DB != nil {
 		dbc.DB.MustExec("CREATE TABLE IF NOT EXISTS counter_metrics (name char(30) UNIQUE, value integer);")
 		dbc.DB.MustExec("CREATE TABLE IF NOT EXISTS gauge_metrics (name char(30) UNIQUE, value double precision);")
 	}
-	return dbc
+	return dbc, nil
 }
 
-func CheckConnection(dbc *DBConnection) error {
-	if dbc.DB != nil {
-		err := dbc.DB.Ping()
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-	return errors.New("Empty connection string")
-}
-
-func Restore(s *storage.MemStorage, dbc *DBConnection) {
-	if dbc.DB == nil {
-		return
-	}
-
+func (d *dbProvider) Restore() error {
 	ctx := context.Background()
-	rowsCounter, err := dbc.DB.QueryContext(ctx, "SELECT name, value FROM counter_metrics;")
+	rowsCounter, err := d.DB.QueryContext(ctx, "SELECT name, value FROM counter_metrics;")
 	if err != nil {
-		zap.S().Error(err)
+		return err
 	}
 	if err := rowsCounter.Err(); err != nil {
-		zap.S().Error(err)
+		return err
 	}
 	defer rowsCounter.Close()
 
@@ -79,17 +67,17 @@ func Restore(s *storage.MemStorage, dbc *DBConnection) {
 		var cm counterMetric
 		err = rowsCounter.Scan(&cm.name, &cm.value)
 		if err != nil {
-			zap.S().Error(err)
+			return err
 		}
-		s.UpdateCounter(cm.name, cm.value)
+		d.st.UpdateCounter(cm.name, cm.value)
 	}
 
-	rowsGauge, err := dbc.DB.QueryContext(ctx, "SELECT name, value FROM gauge_metrics;")
+	rowsGauge, err := d.DB.QueryContext(ctx, "SELECT name, value FROM gauge_metrics;")
 	if err != nil {
-		zap.S().Error(err)
+		return err
 	}
 	if err := rowsGauge.Err(); err != nil {
-		zap.S().Error(err)
+		return err
 	}
 	defer rowsGauge.Close()
 
@@ -97,29 +85,41 @@ func Restore(s *storage.MemStorage, dbc *DBConnection) {
 		var gm gaugeMetric
 		err = rowsGauge.Scan(&gm.name, &gm.value)
 		if err != nil {
-			zap.S().Error(err)
+			return err
 		}
-		s.UpdateGauge(gm.name, gm.value)
+		d.st.UpdateGauge(gm.name, gm.value)
 	}
+	return nil
 }
 
-func Dump(s *storage.MemStorage, dbc *DBConnection, storeInterval int) {
-	pollTicker := time.NewTicker(time.Duration(storeInterval) * time.Second)
+func (d *dbProvider) IntervalDump() {
+	pollTicker := time.NewTicker(time.Duration(d.storeInterval) * time.Second)
 	defer pollTicker.Stop()
 	for range pollTicker.C {
-		saveMetrics(s, dbc)
+		err := d.Dump()
+		if err != nil {
+			zap.S().Error(err)
+		}
 	}
 }
 
-func saveMetrics(s *storage.MemStorage, dbc *DBConnection) error {
-	tx := dbc.DB.MustBegin()
+func (d *dbProvider) Check() error {
+	err := d.DB.Ping()
+	if err != nil {
+		return errors.New("Empty connection string")
+	}
+	return nil
+}
+
+func (d *dbProvider) Dump() error {
+	tx := d.DB.MustBegin()
 
 	tx.MustExec("TRUNCATE counter_metrics, gauge_metrics; ")
-	for k, v := range s.GetCounterData() {
+	for k, v := range d.st.GetCounterData() {
 		tx.MustExec("INSERT INTO counter_metrics (name, value) VALUES ($1, $2); ", k, v)
 	}
 
-	for k, v := range s.GetGaugeData() {
+	for k, v := range d.st.GetGaugeData() {
 		tx.MustExec("INSERT INTO gauge_metrics (name, value) VALUES ($1, $2); ", k, v)
 	}
 

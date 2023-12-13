@@ -10,38 +10,38 @@ type gauge float64
 type counter int64
 
 type MemStorage struct {
-	gaugeData   map[string]gauge
-	counterData map[string]counter
+	GaugeData   map[string]gauge   `json:"gauge"`
+	CounterData map[string]counter `json:"counter"`
 }
 
-type AllMetrics struct {
-	Gauge   map[string]gauge   `json:"gauge"`
-	Counter map[string]counter `json:"counter"`
-}
+//type AllMetrics struct {
+//	Gauge   map[string]gauge   `json:"gauge"`
+//	Counter map[string]counter `json:"counter"`
+//}
 
-func New() *MemStorage {
+func NewMem() *MemStorage {
 	storage := MemStorage{
-		gaugeData:   make(map[string]gauge),
-		counterData: make(map[string]counter),
+		GaugeData:   make(map[string]gauge),
+		CounterData: make(map[string]counter),
 	}
 
 	return &storage
 }
 
 func (s *MemStorage) UpdateCounter(n string, v int64) {
-	s.counterData[n] += counter(v)
+	s.CounterData[n] += counter(v)
 }
 
 func (s *MemStorage) UpdateGauge(n string, v float64) {
-	s.gaugeData[n] = gauge(v)
+	s.GaugeData[n] = gauge(v)
 }
 
 func (s *MemStorage) GetValue(t string, n string) (string, int) {
 	var v string
 	statusCode := http.StatusOK
-	if val, ok := s.gaugeData[n]; ok && t == "gauge" {
+	if val, ok := s.GaugeData[n]; ok && t == "gauge" {
 		v = fmt.Sprint(val)
-	} else if val, ok := s.counterData[n]; ok && t == "counter" {
+	} else if val, ok := s.CounterData[n]; ok && t == "counter" {
 		v = fmt.Sprint(val)
 	} else {
 		statusCode = http.StatusNotFound
@@ -52,12 +52,12 @@ func (s *MemStorage) GetValue(t string, n string) (string, int) {
 func (s *MemStorage) AllMetrics() string {
 	var result string
 	result += "Gauge metrics:\n"
-	for n, v := range s.gaugeData {
+	for n, v := range s.GaugeData {
 		result += fmt.Sprintf("- %s = %f\n", n, v)
 	}
 
 	result += "Counter metrics:\n"
-	for n, v := range s.counterData {
+	for n, v := range s.CounterData {
 		result += fmt.Sprintf("- %s = %d\n", n, v)
 	}
 
@@ -65,27 +65,27 @@ func (s *MemStorage) AllMetrics() string {
 }
 
 func (s *MemStorage) GetCounterValue(id string) int64 {
-	return int64(s.counterData[id])
+	return int64(s.CounterData[id])
 }
 
 func (s *MemStorage) GetGaugeValue(id string) float64 {
-	return float64(s.gaugeData[id])
+	return float64(s.GaugeData[id])
 }
 
 func (s *MemStorage) GetCounterData() map[string]counter {
-	return s.counterData
+	return s.CounterData
 }
 
 func (s *MemStorage) GetGaugeData() map[string]gauge {
-	return s.gaugeData
+	return s.GaugeData
 }
 
 func (s *MemStorage) UpdateGaugeData(gaugeData map[string]gauge) {
-	s.gaugeData = gaugeData
+	s.GaugeData = gaugeData
 }
 
 func (s *MemStorage) UpdateCounterData(counterData map[string]counter) {
-	s.counterData = counterData
+	s.CounterData = counterData
 }
 
 func (s *MemStorage) StoreBatch(metrics []models.Metrics) {
