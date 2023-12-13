@@ -36,12 +36,12 @@ func New() *APIServer {
 		storageProvider, err = storage.NewDBProvider(cfg.DatabaseDSN, cfg.StoreInterval, apiS.st)
 	}
 	if err != nil {
-		zap.S().Fatal(err)
+		zap.S().Error(err)
 	}
 	if cfg.Restore {
 		err := storageProvider.Restore()
 		if err != nil {
-			zap.S().Fatal(err)
+			zap.S().Error(err)
 		}
 	}
 
