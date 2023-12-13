@@ -7,7 +7,7 @@ import (
 )
 
 func TestUpdateCounter(t *testing.T) {
-	s := New()
+	s := NewMem()
 	testCases := []struct {
 		name        string
 		metricsName string
@@ -23,13 +23,13 @@ func TestUpdateCounter(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 			s.UpdateCounter(test.metricsName, test.value)
-			assert.Equal(t, counter(test.want), s.counterData[test.metricsName])
+			assert.Equal(t, counter(test.want), s.CounterData[test.metricsName])
 		})
 	}
 }
 
 func TestUpdateGauge(t *testing.T) {
-	s := New()
+	s := NewMem()
 	testCases := []struct {
 		name        string
 		metricsName string
@@ -44,7 +44,7 @@ func TestUpdateGauge(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 			s.UpdateGauge(test.metricsName, test.value)
-			assert.Equal(t, gauge(test.want), s.gaugeData[test.metricsName])
+			assert.Equal(t, gauge(test.want), s.GaugeData[test.metricsName])
 		})
 	}
 }
