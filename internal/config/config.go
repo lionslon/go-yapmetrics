@@ -65,11 +65,11 @@ func (s *ServerConfig) StoreIntervalNotZero() bool {
 }
 
 func (s *ServerConfig) GetProvider() storage.StorageProvider {
-	if s.FilePath != "" {
-		return storage.FileProvider
-	}
 	if s.DatabaseDSN != "" {
 		return storage.DBProvider
+	}
+	if s.FilePath != "" {
+		return storage.FileProvider
 	}
 	return 0
 }
