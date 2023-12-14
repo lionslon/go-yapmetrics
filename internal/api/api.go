@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"github.com/labstack/echo/v4"
 	"github.com/lionslon/go-yapmetrics/internal/config"
 	"github.com/lionslon/go-yapmetrics/internal/handlers"
@@ -23,20 +22,19 @@ func New() *APIServer {
 	apiS.cfg = cfg
 	apiS.echo = echo.New()
 	apiS.st = storage.NewMem()
+
 	handler := handlers.New(apiS.st)
 	logger, _ := zap.NewDevelopment()
 	zap.ReplaceGlobals(logger)
 	defer logger.Sync()
 
 	var storageProvider storage.StorageWorker
-	var err, pingErr error
+	var err error
 	switch cfg.GetProvider() {
 	case storage.FileProvider:
 		storageProvider = storage.NewFileProvider(cfg.FilePath, cfg.StoreInterval, apiS.st)
-		pingErr = errors.New("Database not used")
 	case storage.DBProvider:
 		storageProvider, err = storage.NewDBProvider(cfg.DatabaseDSN, cfg.StoreInterval, apiS.st)
-		pingErr = storageProvider.Check()
 	}
 	if err != nil {
 		zap.S().Error(err)
@@ -61,7 +59,7 @@ func New() *APIServer {
 	apiS.echo.POST("/update/", handler.UpdateJSON())
 	apiS.echo.POST("/update/:typeM/:nameM/:valueM", handler.UpdateMetrics())
 	apiS.echo.POST("/updates/", handler.UpdatesJSON())
-	apiS.echo.GET("/ping", handler.PingDB(pingErr))
+	apiS.echo.GET("/ping", handler.PingDB(storageProvider))
 
 	return apiS
 }

@@ -136,8 +136,9 @@ func (h *handler) GetValueJSON() echo.HandlerFunc {
 	}
 }
 
-func (h *handler) PingDB(err error) echo.HandlerFunc {
+func (h *handler) PingDB(sw storage.StorageWorker) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
+		err := sw.Check()
 		ctx.Response().Header().Set("Content-Type", "text/html")
 		if err == nil {
 			err = ctx.String(http.StatusOK, "Connection database is OK")
