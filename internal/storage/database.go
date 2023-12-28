@@ -112,27 +112,15 @@ func (d *dbProvider) Check() error {
 }
 
 func (d *dbProvider) Dump() error {
-	tx, err := d.DB.Begin()
-	if err != nil {
-		return err
-	}
+	tx := d.DB.MustBegin()
 
-	_, err = tx.Exec("TRUNCATE counter_metrics, gauge_metrics; ")
-	if err != nil {
-		return err
-	}
+	tx.MustExec("TRUNCATE counter_metrics, gauge_metrics; ")
 	for k, v := range d.st.GetCounterData() {
-		_, err = tx.Exec("INSERT INTO counter_metrics (name, value) VALUES ($1, $2); ", k, v)
-		if err != nil {
-			return err
-		}
+		tx.MustExec("INSERT INTO counter_metrics (name, value) VALUES ($1, $2); ", k, v)
 	}
 
 	for k, v := range d.st.GetGaugeData() {
-		_, err = tx.Exec("INSERT INTO gauge_metrics (name, value) VALUES ($1, $2); ", k, v)
-		if err != nil {
-			return err
-		}
+		tx.MustExec("INSERT INTO gauge_metrics (name, value) VALUES ($1, $2); ", k, v)
 	}
 
 	return tx.Commit()
