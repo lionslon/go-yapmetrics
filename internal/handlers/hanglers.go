@@ -164,7 +164,8 @@ func (h *handler) UpdatesJSON() echo.HandlerFunc {
 		}
 		h.store.StoreBatch(metrics)
 
-		ctx.Response().Header().Set("Content-Type", "application/json")
+    ctx.Response().Header().Set("Content-Type", "application/json")
+    
 		return ctx.NoContent(http.StatusOK)
 	}
 }

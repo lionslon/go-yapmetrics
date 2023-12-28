@@ -46,8 +46,14 @@ func NewDBProvider(dsn string, storeInterval int, m *MemStorage) (StorageWorker,
 	}
 
 	if dbc.DB != nil {
-		dbc.DB.Exec("CREATE TABLE IF NOT EXISTS counter_metrics (name char(30) UNIQUE, value integer);")
-		dbc.DB.Exec("CREATE TABLE IF NOT EXISTS gauge_metrics (name char(30) UNIQUE, value double precision);")
+		_, err := dbc.DB.Exec("CREATE TABLE IF NOT EXISTS counter_metrics (name char(30) UNIQUE, value integer);")
+		if err != nil {
+			return nil, err
+		}
+		_, err = dbc.DB.Exec("CREATE TABLE IF NOT EXISTS gauge_metrics (name char(30) UNIQUE, value double precision);")
+		if err != nil {
+			return nil, err
+		}
 	}
 	return dbc, nil
 }
