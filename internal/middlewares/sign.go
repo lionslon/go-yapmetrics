@@ -18,8 +18,8 @@ func CheckSignReq(password string) echo.MiddlewareFunc {
 			req := ctx.Request()
 			body, err := io.ReadAll(req.Body)
 			if err != nil {
-				return ctx.String(http.StatusBadRequest, "Can't read request body")
-
+				req.Body = io.NopCloser(bytes.NewReader(body))
+				return next(ctx)
 			}
 			singPassword := []byte(password)
 			bodyHash := GetSign(body, singPassword)
