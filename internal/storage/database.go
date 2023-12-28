@@ -44,7 +44,6 @@ func NewDBProvider(dsn string, storeInterval int, m *MemStorage) (StorageWorker,
 	if err != nil {
 		return dbc, err
 	}
-	defer dbc.DB.Close()
 
 	if dbc.DB != nil {
 		_, err := dbc.DB.Exec("CREATE TABLE IF NOT EXISTS counter_metrics (name char(30) UNIQUE, value integer);")
