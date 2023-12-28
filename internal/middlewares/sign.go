@@ -5,7 +5,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"github.com/labstack/echo/v4"
 	"hash"
 	"io"
@@ -22,8 +21,6 @@ func CheckSignReq(password string) echo.MiddlewareFunc {
 				bodyHash := GetSign(body, singPassword)
 				signR := req.Header.Get("HashSHA256")
 
-				fmt.Println(bodyHash)
-				fmt.Println(signR)
 				if signR != bodyHash {
 					return ctx.String(http.StatusBadRequest, "signature is not valid")
 				}
