@@ -163,9 +163,8 @@ func (h *handler) UpdatesJSON() echo.HandlerFunc {
 			return ctx.String(http.StatusBadRequest, fmt.Sprintf("Error in JSON decode: %s", err))
 		}
 		h.store.StoreBatch(metrics)
+		ctx.Response().Header().Set("Content-Type", "application/json")
 
-    ctx.Response().Header().Set("Content-Type", "application/json")
-    
 		return ctx.NoContent(http.StatusOK)
 	}
 }
