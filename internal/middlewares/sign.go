@@ -17,22 +17,18 @@ func CheckSignReq(password string) echo.MiddlewareFunc {
 		return func(ctx echo.Context) (err error) {
 			req := ctx.Request()
 			body, err := io.ReadAll(req.Body)
-			if err != nil {
-				req.Body = io.NopCloser(bytes.NewReader(body))
-				return next(ctx)
-			}
-			singPassword := []byte(password)
-			bodyHash := GetSign(body, singPassword)
-			signR := req.Header.Get("HashSHA256")
+			if err == nil {
+				singPassword := []byte(password)
+				bodyHash := GetSign(body, singPassword)
+				signR := req.Header.Get("HashSHA256")
 
-			fmt.Println(bodyHash)
-			fmt.Println(signR)
-			if signR != bodyHash {
-				return ctx.String(http.StatusBadRequest, "signature is not valid")
+				fmt.Println(bodyHash)
+				fmt.Println(signR)
+				if signR != bodyHash {
+					return ctx.String(http.StatusBadRequest, "signature is not valid")
+				}
 			}
-
 			req.Body = io.NopCloser(bytes.NewReader(body))
-
 			return next(ctx)
 		}
 	}
