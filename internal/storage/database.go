@@ -44,10 +44,17 @@ func NewDBProvider(dsn string, storeInterval int, m *MemStorage) (StorageWorker,
 	if err != nil {
 		return dbc, err
 	}
+	defer dbc.DB.Close()
 
 	if dbc.DB != nil {
-		dbc.DB.Exec("CREATE TABLE IF NOT EXISTS counter_metrics (name char(30) UNIQUE, value integer);")
-		dbc.DB.Exec("CREATE TABLE IF NOT EXISTS gauge_metrics (name char(30) UNIQUE, value double precision);")
+		_, err := dbc.DB.Exec("CREATE TABLE IF NOT EXISTS counter_metrics (name char(30) UNIQUE, value integer);")
+		if err != nil {
+			return nil, err
+		}
+		_, err = dbc.DB.Exec("CREATE TABLE IF NOT EXISTS gauge_metrics (name char(30) UNIQUE, value double precision);")
+		if err != nil {
+			return nil, err
+		}
 	}
 	return dbc, nil
 }
@@ -112,15 +119,27 @@ func (d *dbProvider) Check() error {
 }
 
 func (d *dbProvider) Dump() error {
-	tx := d.DB.MustBegin()
+	tx, err := d.DB.Begin()
+	if err != nil {
+		return err
+	}
 
-	tx.MustExec("TRUNCATE counter_metrics, gauge_metrics; ")
+	_, err = tx.Exec("TRUNCATE counter_metrics, gauge_metrics; ")
+	if err != nil {
+		return err
+	}
 	for k, v := range d.st.GetCounterData() {
-		tx.MustExec("INSERT INTO counter_metrics (name, value) VALUES ($1, $2); ", k, v)
+		_, err = tx.Exec("INSERT INTO counter_metrics (name, value) VALUES ($1, $2); ", k, v)
+		if err != nil {
+			return err
+		}
 	}
 
 	for k, v := range d.st.GetGaugeData() {
-		tx.MustExec("INSERT INTO gauge_metrics (name, value) VALUES ($1, $2); ", k, v)
+		_, err = tx.Exec("INSERT INTO gauge_metrics (name, value) VALUES ($1, $2); ", k, v)
+		if err != nil {
+			return err
+		}
 	}
 
 	return tx.Commit()
