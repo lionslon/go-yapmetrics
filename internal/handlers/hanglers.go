@@ -2,10 +2,13 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/lionslon/go-yapmetrics/internal/models"
 	"github.com/lionslon/go-yapmetrics/internal/storage"
+	"go.uber.org/zap"
+	"io"
 	"net/http"
 	"strconv"
 )
@@ -17,6 +20,7 @@ type storageUpdater interface {
 	AllMetrics() string
 	GetCounterValue(string) int64
 	GetGaugeValue(string) float64
+	StoreBatch([]models.Metrics)
 }
 
 type handler struct {
@@ -129,5 +133,37 @@ func (h *handler) GetValueJSON() echo.HandlerFunc {
 
 		ctx.Response().Header().Set("Content-Type", "application/json")
 		return ctx.JSON(http.StatusOK, metric)
+	}
+}
+
+func (h *handler) PingDB(sw storage.StorageWorker) echo.HandlerFunc {
+	return func(ctx echo.Context) error {
+		err := sw.Check()
+		ctx.Response().Header().Set("Content-Type", "text/html")
+		if err == nil {
+			err = ctx.String(http.StatusOK, "Connection database is OK")
+		} else {
+			zap.S().Error("Connection database is NOT OK")
+			err = ctx.String(http.StatusInternalServerError, "Connection database is NOT OK")
+		}
+
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+}
+
+func (h *handler) UpdatesJSON() echo.HandlerFunc {
+	return func(ctx echo.Context) error {
+		metrics := make([]models.Metrics, 0)
+		err := json.NewDecoder(ctx.Request().Body).Decode(&metrics)
+		if err != nil && !errors.Is(err, io.EOF) {
+			return ctx.String(http.StatusBadRequest, fmt.Sprintf("Error in JSON decode: %s", err))
+		}
+		h.store.StoreBatch(metrics)
+
+		return ctx.NoContent(http.StatusOK)
 	}
 }

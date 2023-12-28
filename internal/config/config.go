@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"github.com/caarlos0/env"
+	"github.com/lionslon/go-yapmetrics/internal/storage"
 	"go.uber.org/zap"
 )
 
@@ -17,17 +18,18 @@ type ServerConfig struct {
 	StoreInterval int    `env:"STORE_INTERVAL"`
 	FilePath      string `env:"FILE_STORAGE_PATH"`
 	Restore       bool   `env:"RESTORE"`
+	DatabaseDSN   string `env:"DATABASE_DSN"`
 }
 
-func (c *ClientConfig) New() ClientConfig {
+func NewClient() *ClientConfig {
 	cfg := &ClientConfig{}
-	parseClientFlags(c)
-	err := env.Parse(c)
+	parseClientFlags(cfg)
+	err := env.Parse(cfg)
 
 	if err != nil {
 		zap.S().Error(err)
 	}
-	return *cfg
+	return cfg
 }
 
 func parseClientFlags(c *ClientConfig) {
@@ -37,15 +39,15 @@ func parseClientFlags(c *ClientConfig) {
 	flag.Parse()
 }
 
-func (s *ServerConfig) New() ServerConfig {
+func NewServer() *ServerConfig {
 	cfg := &ServerConfig{}
-	parseServerFlags(s)
-	err := env.Parse(s)
+	parseServerFlags(cfg)
+	err := env.Parse(cfg)
 
 	if err != nil {
 		zap.S().Error(err)
 	}
-	return *cfg
+	return cfg
 }
 
 func parseServerFlags(s *ServerConfig) {
@@ -53,5 +55,21 @@ func parseServerFlags(s *ServerConfig) {
 	flag.IntVar(&s.StoreInterval, "i", 300, "interval for saving metrics on the server")
 	flag.StringVar(&s.FilePath, "f", "/tmp/metrics-db.json", "file storage path for saving data")
 	flag.BoolVar(&s.Restore, "r", true, "need to load data at startup")
+	flag.StringVar(&s.DatabaseDSN, "d", "", "Database Data Source Name")
+
 	flag.Parse()
+}
+
+func (s *ServerConfig) StoreIntervalNotZero() bool {
+	return s.StoreInterval != 0
+}
+
+func (s *ServerConfig) GetProvider() storage.StorageProvider {
+	if s.DatabaseDSN != "" {
+		return storage.DBProvider
+	}
+	if s.FilePath != "" {
+		return storage.FileProvider
+	}
+	return 0
 }

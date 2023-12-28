@@ -5,7 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"github.com/levigross/grequests"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/lionslon/go-yapmetrics/internal/config"
 	"github.com/lionslon/go-yapmetrics/internal/models"
 	"go.uber.org/zap"
@@ -19,8 +19,7 @@ var pollCount uint64
 
 func main() {
 
-	cfg := config.ClientConfig{}
-	cfg.New()
+	cfg := config.NewClient()
 
 	pollTicker := time.NewTicker(time.Duration(cfg.PollInterval) * time.Second)
 	defer pollTicker.Stop()
@@ -71,19 +70,24 @@ func getMetrics() {
 	valuesGauge["TotalAlloc"] = float64(rtm.TotalAlloc)
 }
 
-func postQueries(cfg config.ClientConfig) {
+func postQueries(cfg *config.ClientConfig) {
 	url := fmt.Sprintf("http://%s/update/", cfg.Addr)
+	client := retryablehttp.NewClient()
+	client.RetryMax = 3
+	client.RetryWaitMin = time.Second * 1
+	client.RetryWaitMax = time.Second * 5
+
 	for k, v := range valuesGauge {
-		postJSON(url, models.Metrics{ID: k, MType: "gauge", Value: &v})
+		postJSON(client, url, models.Metrics{ID: k, MType: "gauge", Value: &v})
 	}
 	pc := int64(pollCount)
-	postJSON(url, models.Metrics{ID: "PollCount", MType: "counter", Delta: &pc})
+	postJSON(client, url, models.Metrics{ID: "PollCount", MType: "counter", Delta: &pc})
 	r := rand.Float64()
-	postJSON(url, models.Metrics{ID: "RandomValue", MType: "gauge", Value: &r})
+	postJSON(client, url, models.Metrics{ID: "RandomValue", MType: "gauge", Value: &r})
 	pollCount = 0
 }
 
-func postJSON(url string, m models.Metrics) {
+func postJSON(c *retryablehttp.Client, url string, m models.Metrics) {
 	js, err := json.Marshal(m)
 	if err != nil {
 		zap.S().Error(err)
@@ -93,12 +97,19 @@ func postJSON(url string, m models.Metrics) {
 	if err != nil {
 		zap.S().Error(err)
 	}
-	grequests.Post(url,
-		&grequests.RequestOptions{
-			Headers: map[string]string{
-				"content-type":     "application/json",
-				"content-encoding": "gzip",
-			}, JSON: gz})
+
+	req, err := retryablehttp.NewRequest("POST", url, gz)
+	if err != nil {
+		zap.S().Error(err)
+	}
+
+	req.Header.Add("content-type", "application/json")
+	req.Header.Add("content-encoding", "gzip")
+	resp, err := c.Do(req)
+	if err != nil {
+		zap.S().Error(err)
+	}
+	defer resp.Body.Close()
 }
 
 func compress(b []byte) ([]byte, error) {
