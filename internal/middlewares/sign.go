@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"github.com/labstack/echo/v4"
 	"hash"
 	"io"
@@ -16,17 +17,23 @@ func CheckSignReq(password string) echo.MiddlewareFunc {
 		return func(ctx echo.Context) (err error) {
 			req := ctx.Request()
 			body, err := io.ReadAll(req.Body)
+			//fmt.Println(body)
 			if err == nil {
 				singPassword := []byte(password)
 				bodyHash := GetSign(body, singPassword)
 				signR := req.Header.Get("HashSHA256")
-
+				fmt.Println(fmt.Sprintf("body: %s", string(body)))
+				fmt.Println(fmt.Sprintf("Пришел: %s", bodyHash))
+				fmt.Println(fmt.Sprintf("Рассчитал: %s", signR))
 				if signR != bodyHash {
 					return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "signature is not valid"})
 					//return ctx.String(http.StatusBadRequest, "signature is not valid")
 				}
 			}
 			req.Body = io.NopCloser(bytes.NewReader(body))
+			//body1, err := io.ReadAll(req.Body)
+			//fmt.Println(body1)
+			//req.Body = io.NopCloser(bytes.NewReader(body1))
 			return next(ctx)
 		}
 	}

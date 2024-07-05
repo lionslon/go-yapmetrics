@@ -10,6 +10,7 @@ import (
 	"github.com/lionslon/go-yapmetrics/internal/middlewares"
 	"github.com/lionslon/go-yapmetrics/internal/models"
 	"go.uber.org/zap"
+	"io"
 	"math/rand"
 	"runtime"
 	"time"
@@ -73,6 +74,7 @@ func getMetrics() {
 
 func postQueries(cfg *config.ClientConfig) {
 	url := fmt.Sprintf("http://%s/update/", cfg.Addr)
+	url1 := fmt.Sprintf("http://%s/value/", cfg.Addr)
 	client := retryablehttp.NewClient()
 	client.RetryMax = 3
 	client.RetryWaitMin = time.Second * 1
@@ -85,6 +87,7 @@ func postQueries(cfg *config.ClientConfig) {
 	postJSON(client, url, models.Metrics{ID: "PollCount", MType: "counter", Delta: &pc}, cfg.SignPass)
 	r := rand.Float64()
 	postJSON(client, url, models.Metrics{ID: "RandomValue", MType: "gauge", Value: &r}, cfg.SignPass)
+	postJSON(client, url1, models.Metrics{ID: "testCounter", MType: "counter"}, cfg.SignPass)
 	pollCount = 0
 }
 
@@ -115,6 +118,10 @@ func postJSON(c *retryablehttp.Client, url string, m models.Metrics, password st
 	if err != nil {
 		zap.S().Error(err)
 	}
+	body, err := io.ReadAll(resp.Body)
+	fmt.Println(fmt.Sprintf("Поймав: %s", body))
+	req.Body = io.NopCloser(bytes.NewReader(body))
+
 	defer resp.Body.Close()
 }
 
