@@ -119,7 +119,7 @@ func postJSON(c *retryablehttp.Client, url string, m models.Metrics, password st
 		zap.S().Error(err)
 	}
 	body, err := io.ReadAll(resp.Body)
-	fmt.Println(fmt.Sprintf("Поймав: %s", body))
+	fmt.Println(fmt.Sprintf("Пульнул: %s", body))
 	req.Body = io.NopCloser(bytes.NewReader(body))
 
 	defer resp.Body.Close()
