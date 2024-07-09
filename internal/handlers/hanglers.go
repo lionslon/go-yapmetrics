@@ -142,7 +142,6 @@ func (h *handler) UpdateJSON() echo.HandlerFunc {
 func (h *handler) GetValueJSON() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		ctx.Response().Header().Set("Content-Type", "application/json")
-		fmt.Println(fmt.Sprintf("Поймав: %s", ctx.Request().Body))
 		var metric models.Metrics
 		err := json.NewDecoder(ctx.Request().Body).Decode(&metric)
 		if err != nil {
