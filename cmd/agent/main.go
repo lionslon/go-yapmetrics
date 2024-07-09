@@ -118,7 +118,7 @@ func postJSON(c *retryablehttp.Client, url string, m models.Metrics, password st
 	if err != nil {
 		zap.S().Error(err)
 	}
-	body, err := io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 	req.Body = io.NopCloser(bytes.NewReader(body))
 
 	defer resp.Body.Close()
