@@ -9,10 +9,13 @@ import (
 	"github.com/lionslon/go-yapmetrics/internal/config"
 	"github.com/lionslon/go-yapmetrics/internal/middlewares"
 	"github.com/lionslon/go-yapmetrics/internal/models"
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/mem"
 	"go.uber.org/zap"
 	"io"
 	"math/rand"
 	"runtime"
+	"sync"
 	"time"
 )
 
@@ -22,20 +25,45 @@ var pollCount uint64
 func main() {
 
 	cfg := config.NewClient()
+	var wg sync.WaitGroup
 
 	pollTicker := time.NewTicker(time.Duration(cfg.PollInterval) * time.Second)
 	defer pollTicker.Stop()
 	reportTicker := time.NewTicker(time.Duration(cfg.ReportInterval) * time.Second)
 	defer reportTicker.Stop()
+	//for {
+	//	select {
+	//	case <-pollTicker.C:
+	//		fmt.Println("getMetrics")
+	//		getMetrics()
+	//	case <-reportTicker.C:
+	//		fmt.Println("postQueries")
+	//		postQueries(cfg)
+	//	default:
+	//		fmt.Println("default")
+	//	}
+	//}
+	//fmt.Println("Выход")
 
-	for {
-		select {
-		case <-pollTicker.C:
-			getMetrics()
-		case <-reportTicker.C:
-			postQueries(cfg)
+	wg.Add(1)
+	go func(cfg *config.ClientConfig) {
+		defer wg.Done()
+		for {
+			select {
+			case x := <-pollTicker.C:
+				getMetrics()
+				fmt.Println("Поймав пултикер", x)
+				v, _ := mem.VirtualMemory()
+				fmt.Printf("Total: %v, Free:%v, UsedPercent:%f%%\n", v.Total, v.Free, v.UsedPercent)
+				y, _ := cpu.Counts(true)
+				fmt.Println(y)
+			case <-reportTicker.C:
+				postQueries(cfg)
+				fmt.Println("postQueries")
+			}
 		}
-	}
+	}(cfg)
+	wg.Wait()
 }
 
 func getMetrics() {
