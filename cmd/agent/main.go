@@ -50,16 +50,11 @@ func main() {
 		defer wg.Done()
 		for {
 			select {
-			case x := <-pollTicker.C:
+			case <-pollTicker.C:
 				getMetrics()
-				fmt.Println("Поймав пултикер", x)
-				v, _ := mem.VirtualMemory()
-				fmt.Printf("Total: %v, Free:%v, UsedPercent:%f%%\n", v.Total, v.Free, v.UsedPercent)
-				y, _ := cpu.Counts(true)
-				fmt.Println(y)
+				getExtraMetrics()
 			case <-reportTicker.C:
 				postQueries(cfg)
-				fmt.Println("postQueries")
 			}
 		}
 	}(cfg)
@@ -98,6 +93,15 @@ func getMetrics() {
 	valuesGauge["StackSys"] = float64(rtm.StackSys)
 	valuesGauge["Sys"] = float64(rtm.Sys)
 	valuesGauge["TotalAlloc"] = float64(rtm.TotalAlloc)
+}
+
+func getExtraMetrics() {
+	vmm, _ := mem.VirtualMemory()
+	cpm, _ := cpu.Counts(true)
+
+	valuesGauge["TotalMemory"] = float64(vmm.Total)
+	valuesGauge["FreeMemory"] = float64(vmm.Free)
+	valuesGauge["CPUutilization1"] = float64(cpm)
 }
 
 func postQueries(cfg *config.ClientConfig) {

@@ -10,6 +10,7 @@ import (
 type ClientConfig struct {
 	PollInterval   int    `env:"POLL_INTERVAL"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
+	RateLimit      int    `env:"RATE_LIMIT"`
 	Addr           string `env:"ADDRESS"`
 	SignPass       string `env:"KEY"`
 }
@@ -37,6 +38,7 @@ func NewClient() *ClientConfig {
 func parseClientFlags(c *ClientConfig) {
 	flag.StringVar(&c.Addr, "a", "localhost:8080", "address and port to run server")
 	flag.IntVar(&c.ReportInterval, "r", 10, "report interval in seconds")
+	flag.IntVar(&c.RateLimit, "l", 10, "rate limit")
 	flag.IntVar(&c.PollInterval, "p", 2, "poll interval in seconds")
 	flag.StringVar(&c.SignPass, "k", "", "signature for HashSHA256")
 	flag.Parse()
