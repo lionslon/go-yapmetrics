@@ -31,19 +31,8 @@ func main() {
 	defer pollTicker.Stop()
 	reportTicker := time.NewTicker(time.Duration(cfg.ReportInterval) * time.Second)
 	defer reportTicker.Stop()
-	//for {
-	//	select {
-	//	case <-pollTicker.C:
-	//		fmt.Println("getMetrics")
-	//		getMetrics()
-	//	case <-reportTicker.C:
-	//		fmt.Println("postQueries")
-	//		postQueries(cfg)
-	//	default:
-	//		fmt.Println("default")
-	//	}
-	//}
-	//fmt.Println("Выход")
+
+	limitChan := make(chan struct{}, cfg.RateLimit)
 
 	wg.Add(1)
 	go func(cfg *config.ClientConfig) {
@@ -54,7 +43,11 @@ func main() {
 				getMetrics()
 				getExtraMetrics()
 			case <-reportTicker.C:
-				postQueries(cfg)
+				limitChan <- struct{}{}
+				go func() {
+					postQueries(cfg)
+					<-limitChan
+				}()
 			}
 		}
 	}(cfg)
