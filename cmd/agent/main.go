@@ -11,7 +11,6 @@ import (
 	"github.com/lionslon/go-yapmetrics/internal/models"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
-	"go.uber.org/zap"
 	"io"
 	"math/rand"
 	"runtime"
@@ -33,26 +32,36 @@ func main() {
 	defer reportTicker.Stop()
 
 	limitChan := make(chan struct{}, cfg.RateLimit)
-
 	wg.Add(1)
-	go func(cfg *config.ClientConfig) {
-		defer wg.Done()
-		for {
-			select {
-			case <-pollTicker.C:
-				getMetrics()
-				getExtraMetrics()
-			case <-reportTicker.C:
-				limitChan <- struct{}{}
-				go func() {
-					postQueries(cfg)
-					<-limitChan
-				}()
-			}
-		}
-	}(cfg)
-	wg.Wait()
 
+	go func() {
+		defer wg.Done()
+		for range pollTicker.C {
+			var metricsWg sync.WaitGroup
+			metricsWg.Add(2)
+			go func() {
+				defer metricsWg.Done()
+				getMetrics()
+			}()
+			go func() {
+				defer metricsWg.Done()
+				getExtraMetrics()
+			}()
+			metricsWg.Wait()
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		for range reportTicker.C {
+			limitChan <- struct{}{}
+			go func() {
+				postQueries(cfg)
+				<-limitChan
+			}()
+		}
+	}()
+	wg.Wait()
 }
 
 func getMetrics() {
@@ -91,16 +100,20 @@ func getMetrics() {
 
 func getExtraMetrics() {
 	vmm, _ := mem.VirtualMemory()
-	cpm, _ := cpu.Counts(true)
+	cpm, _ := cpu.Percent(0, true)
 
 	valuesGauge["TotalMemory"] = float64(vmm.Total)
 	valuesGauge["FreeMemory"] = float64(vmm.Free)
-	valuesGauge["CPUutilization1"] = float64(cpm)
+	number, _ := cpu.Counts(true)
+	for i := 0; i < number; i++ {
+		cpuNumber := fmt.Sprintf("CPUutilization%d", i+1)
+		valuesGauge[cpuNumber] = cpm[i]
+	}
+
 }
 
 func postQueries(cfg *config.ClientConfig) {
 	url := fmt.Sprintf("http://%s/update/", cfg.Addr)
-	url1 := fmt.Sprintf("http://%s/value/", cfg.Addr)
 	client := retryablehttp.NewClient()
 	client.RetryMax = 3
 	client.RetryWaitMin = time.Second * 1
@@ -110,27 +123,28 @@ func postQueries(cfg *config.ClientConfig) {
 		postJSON(client, url, models.Metrics{ID: k, MType: "gauge", Value: &v}, cfg.SignPass)
 	}
 	pc := int64(pollCount)
-	postJSON(client, url, models.Metrics{ID: "PollCount", MType: "counter", Delta: &pc}, cfg.SignPass)
+	err := postJSON(client, url, models.Metrics{ID: "PollCount", MType: "counter", Delta: &pc}, cfg.SignPass)
+	if err != nil {
+		pollCount = 0
+	}
 	r := rand.Float64()
 	postJSON(client, url, models.Metrics{ID: "RandomValue", MType: "gauge", Value: &r}, cfg.SignPass)
-	postJSON(client, url1, models.Metrics{ID: "testCounter", MType: "counter"}, cfg.SignPass)
-	pollCount = 0
 }
 
-func postJSON(c *retryablehttp.Client, url string, m models.Metrics, password string) {
+func postJSON(c *retryablehttp.Client, url string, m models.Metrics, password string) error {
 	js, err := json.Marshal(m)
 	if err != nil {
-		zap.S().Error(err)
+		return err
 	}
 
 	gz, err := compress(js)
 	if err != nil {
-		zap.S().Error(err)
+		return err
 	}
 
 	req, err := retryablehttp.NewRequest("POST", url, gz)
 	if err != nil {
-		zap.S().Error(err)
+		return err
 	}
 
 	singPassword := []byte(password)
@@ -142,9 +156,12 @@ func postJSON(c *retryablehttp.Client, url string, m models.Metrics, password st
 	req.Header.Add("content-encoding", "gzip")
 	resp, err := c.Do(req)
 	if err != nil {
-		zap.S().Error(err)
+		return err
 	}
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
 	req.Body = io.NopCloser(bytes.NewReader(body))
 
 	defer resp.Body.Close()
