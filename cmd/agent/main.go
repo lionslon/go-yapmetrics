@@ -165,6 +165,7 @@ func postJSON(c *retryablehttp.Client, url string, m models.Metrics, password st
 	req.Body = io.NopCloser(bytes.NewReader(body))
 
 	defer resp.Body.Close()
+	return nil
 }
 
 func compress(b []byte) ([]byte, error) {
