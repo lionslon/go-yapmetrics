@@ -56,7 +56,7 @@ func (h *handler) UpdateMetrics() echo.HandlerFunc {
 			}
 			h.store.UpdateGauge(metricsName, value)
 		default:
-			return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid metric type. Can only be 'gauge' or 'counter'"})
+			return ctx.JSON(http.StatusNotImplemented, map[string]string{"error": "Invalid metric type. Can only be 'gauge' or 'counter'"})
 		}
 
 		acceptHeader := ctx.Request().Header.Get("Accept")
