@@ -114,14 +114,18 @@ func getExtraMetrics() {
 
 func postQueries(cfg *config.ClientConfig) {
 	url := fmt.Sprintf("http://%s/update/", cfg.Addr)
+	urlBatch := fmt.Sprintf("http://%s/updates/", cfg.Addr)
 	client := retryablehttp.NewClient()
 	client.RetryMax = 3
 	client.RetryWaitMin = time.Second * 1
 	client.RetryWaitMax = time.Second * 5
 
+	var payload []models.Metrics
+
 	for k, v := range valuesGauge {
-		postJSON(client, url, models.Metrics{ID: k, MType: "gauge", Value: &v}, cfg.SignPass)
+		payload = append(payload, models.Metrics{ID: k, MType: "gauge", Value: &v})
 	}
+	postJSONBatch(client, urlBatch, payload, cfg.SignPass)
 	pc := int64(pollCount)
 	err := postJSON(client, url, models.Metrics{ID: "PollCount", MType: "counter", Delta: &pc}, cfg.SignPass)
 	if err != nil {
@@ -132,6 +136,43 @@ func postQueries(cfg *config.ClientConfig) {
 }
 
 func postJSON(c *retryablehttp.Client, url string, m models.Metrics, password string) error {
+	js, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+
+	gz, err := compress(js)
+	if err != nil {
+		return err
+	}
+
+	req, err := retryablehttp.NewRequest("POST", url, gz)
+	if err != nil {
+		return err
+	}
+
+	singPassword := []byte(password)
+	if singPassword != nil {
+		req.Header.Add("HashSHA256", middlewares.GetSign(js, singPassword))
+	}
+
+	req.Header.Add("content-type", "application/json")
+	req.Header.Add("content-encoding", "gzip")
+	resp, err := c.Do(req)
+	if err != nil {
+		return err
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	req.Body = io.NopCloser(bytes.NewReader(body))
+
+	defer resp.Body.Close()
+	return nil
+}
+
+func postJSONBatch(c *retryablehttp.Client, url string, m []models.Metrics, password string) error {
 	js, err := json.Marshal(m)
 	if err != nil {
 		return err
