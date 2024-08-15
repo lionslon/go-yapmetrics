@@ -18,8 +18,11 @@ import (
 	"time"
 )
 
-var valuesGauge = map[string]float64{}
-var pollCount uint64
+var (
+	valuesGauge = map[string]float64{}
+	pollCount   uint64
+	mu          sync.Mutex
+)
 
 func main() {
 
@@ -65,6 +68,9 @@ func main() {
 }
 
 func getMetrics() {
+	mu.Lock()
+	defer mu.Unlock()
+
 	var rtm runtime.MemStats
 
 	pollCount += 1
@@ -99,6 +105,9 @@ func getMetrics() {
 }
 
 func getExtraMetrics() {
+	mu.Lock()
+	defer mu.Unlock()
+
 	vmm, _ := mem.VirtualMemory()
 	cpm, _ := cpu.Percent(0, true)
 
@@ -113,6 +122,9 @@ func getExtraMetrics() {
 }
 
 func postQueries(cfg *config.ClientConfig) {
+	mu.Lock()
+	defer mu.Unlock()
+
 	url := fmt.Sprintf("http://%s/update/", cfg.Addr)
 	urlBatch := fmt.Sprintf("http://%s/updates/", cfg.Addr)
 	client := retryablehttp.NewClient()
