@@ -1,11 +1,14 @@
 package api
 
 import (
+	"fmt"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/lionslon/go-yapmetrics/internal/config"
 	"github.com/lionslon/go-yapmetrics/internal/handlers"
 	"github.com/lionslon/go-yapmetrics/internal/middlewares"
 	"github.com/lionslon/go-yapmetrics/internal/storage"
+	"github.com/lionslon/go-yapmetrics/pkg/utils/profile"
 	"go.uber.org/zap"
 	"log"
 )
@@ -22,6 +25,11 @@ func New() *APIServer {
 	apiS.cfg = cfg
 	apiS.echo = echo.New()
 	apiS.st = storage.NewMem()
+
+	if cfg.EnableProfiling {
+		fmt.Println("Profile!!!")
+		profile.ProfileIfEnabled()
+	}
 
 	handler := handlers.New(apiS.st)
 	logger, _ := zap.NewDevelopment()
@@ -51,7 +59,10 @@ func New() *APIServer {
 	}
 
 	apiS.echo.Use(middlewares.WithLogging())
-	apiS.echo.Use(middlewares.GzipUnpacking())
+	//apiS.echo.Use(middlewares.GzipUnpacking())
+	apiS.echo.Use(middleware.GzipWithConfig(middleware.GzipConfig{
+		Level: 5,
+	}))
 	if cfg.SignPass != "" {
 		apiS.echo.Use(middlewares.CheckSignReq(cfg.SignPass))
 	}

@@ -16,12 +16,13 @@ type ClientConfig struct {
 }
 
 type ServerConfig struct {
-	Addr          string `env:"ADDRESS"`
-	StoreInterval int    `env:"STORE_INTERVAL"`
-	FilePath      string `env:"FILE_STORAGE_PATH"`
-	Restore       bool   `env:"RESTORE"`
-	DatabaseDSN   string `env:"DATABASE_DSN"`
-	SignPass      string `env:"KEY"`
+	Addr            string `env:"ADDRESS"`
+	StoreInterval   int    `env:"STORE_INTERVAL"`
+	FilePath        string `env:"FILE_STORAGE_PATH"`
+	Restore         bool   `env:"RESTORE"`
+	DatabaseDSN     string `env:"DATABASE_DSN"`
+	SignPass        string `env:"KEY"`
+	EnableProfiling bool   `env:"ENABLE_PROFILING"`
 }
 
 func NewClient() *ClientConfig {
@@ -62,6 +63,7 @@ func parseServerFlags(s *ServerConfig) {
 	flag.BoolVar(&s.Restore, "r", true, "need to load data at startup")
 	flag.StringVar(&s.DatabaseDSN, "d", "", "Database Data Source Name")
 	flag.StringVar(&s.SignPass, "k", "", "signature for HashSHA256")
+	flag.BoolVar(&s.EnableProfiling, "p", false, "run pprof server")
 
 	flag.Parse()
 }
