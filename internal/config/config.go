@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// ClientConfig конфиг агента
 type ClientConfig struct {
 	PollInterval   int    `env:"POLL_INTERVAL"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
@@ -15,6 +16,7 @@ type ClientConfig struct {
 	SignPass       string `env:"KEY"`
 }
 
+// ServerConfig конфиг сервера
 type ServerConfig struct {
 	Addr            string `env:"ADDRESS"`
 	StoreInterval   int    `env:"STORE_INTERVAL"`
@@ -25,6 +27,7 @@ type ServerConfig struct {
 	EnableProfiling bool   `env:"ENABLE_PROFILING"`
 }
 
+// NewClient парсит флаги и env + инициализирует конфиг агента
 func NewClient() *ClientConfig {
 	cfg := &ClientConfig{}
 	parseClientFlags(cfg)
@@ -45,6 +48,7 @@ func parseClientFlags(c *ClientConfig) {
 	flag.Parse()
 }
 
+// NewServer парсит флаги и env + инициализирует конфиг сервера
 func NewServer() *ServerConfig {
 	cfg := &ServerConfig{}
 	parseServerFlags(cfg)
