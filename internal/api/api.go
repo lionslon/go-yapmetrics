@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/lionslon/go-yapmetrics/internal/config"
@@ -24,11 +23,10 @@ func New() *APIServer {
 	cfg := config.NewServer()
 	apiS.cfg = cfg
 	apiS.echo = echo.New()
-	apiS.st = storage.NewMem()
+	apiS.st = storage.NewMemoryStorage()
 
 	if cfg.EnableProfiling {
-		fmt.Println("Profile!!!")
-		profile.ProfileIfEnabled()
+		profile.StartProfilingServer()
 	}
 
 	handler := handlers.New(apiS.st)

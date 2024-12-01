@@ -2,20 +2,20 @@ package profile
 
 import (
 	"fmt"
+	"go.uber.org/zap"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 )
 
-func ProfileIfEnabled() {
-	fmt.Println("started")
+func StartProfilingServer() {
 	pprofPort := os.Getenv("PPROF_PORT")
 	if pprofPort == "" {
 		pprofPort = "9090"
 	}
 
 	go func() {
-		fmt.Println(http.ListenAndServe(fmt.Sprintf(":%s", pprofPort), nil))
+		zap.S().Info(http.ListenAndServe(fmt.Sprintf(":%s", pprofPort), nil))
 	}()
 
 }

@@ -15,8 +15,8 @@ type MemStorage struct {
 	CounterData map[string]counter `json:"counter"`
 }
 
-// NewMem конструктор для структуры
-func NewMem() *MemStorage {
+// NewMemoryStorage конструктор для структуры
+func NewMemoryStorage() *MemStorage {
 	storage := MemStorage{
 		GaugeData:   make(map[string]gauge),
 		CounterData: make(map[string]counter),
