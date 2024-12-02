@@ -24,12 +24,14 @@ type gaugeMetric struct {
 	value float64
 }
 
+// dbProvider структура для работы со структурой данных в БД
 type dbProvider struct {
 	st            *MemStorage
 	DB            *sqlx.DB
 	storeInterval int
 }
 
+// NewDBProvider инициализация и подготовка интерфейса для работы с БД
 func NewDBProvider(dsn string, storeInterval int, m *MemStorage) (StorageWorker, error) {
 	var err error
 	dbc := &dbProvider{
@@ -58,6 +60,7 @@ func NewDBProvider(dsn string, storeInterval int, m *MemStorage) (StorageWorker,
 	return dbc, nil
 }
 
+// Restore восстанавливает данные из БД
 func (d *dbProvider) Restore() error {
 	ctx := context.Background()
 	rowsCounter, err := d.DB.QueryContext(ctx, "SELECT name, value FROM counter_metrics;")
@@ -98,6 +101,7 @@ func (d *dbProvider) Restore() error {
 	return nil
 }
 
+// IntervalDump обертка над записью в БД с указанным интервалом
 func (d *dbProvider) IntervalDump() {
 	pollTicker := time.NewTicker(time.Duration(d.storeInterval) * time.Second)
 	defer pollTicker.Stop()
@@ -109,6 +113,7 @@ func (d *dbProvider) IntervalDump() {
 	}
 }
 
+// Check проверяет подключение к БД
 func (d *dbProvider) Check() error {
 	err := d.DB.Ping()
 	if err != nil {
@@ -117,6 +122,7 @@ func (d *dbProvider) Check() error {
 	return nil
 }
 
+// Dump подчищает и записывает в БД
 func (d *dbProvider) Dump() error {
 	tx, err := d.DB.Begin()
 	if err != nil {

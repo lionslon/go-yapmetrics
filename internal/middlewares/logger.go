@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// WithLogging предподготавливает и прокидывает логгер
 func WithLogging() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) (err error) {

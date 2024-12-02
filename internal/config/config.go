@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// ClientConfig конфиг агента
 type ClientConfig struct {
 	PollInterval   int    `env:"POLL_INTERVAL"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
@@ -15,15 +16,18 @@ type ClientConfig struct {
 	SignPass       string `env:"KEY"`
 }
 
+// ServerConfig конфиг сервера
 type ServerConfig struct {
-	Addr          string `env:"ADDRESS"`
-	StoreInterval int    `env:"STORE_INTERVAL"`
-	FilePath      string `env:"FILE_STORAGE_PATH"`
-	Restore       bool   `env:"RESTORE"`
-	DatabaseDSN   string `env:"DATABASE_DSN"`
-	SignPass      string `env:"KEY"`
+	Addr            string `env:"ADDRESS"`
+	StoreInterval   int    `env:"STORE_INTERVAL"`
+	FilePath        string `env:"FILE_STORAGE_PATH"`
+	Restore         bool   `env:"RESTORE"`
+	DatabaseDSN     string `env:"DATABASE_DSN"`
+	SignPass        string `env:"KEY"`
+	EnableProfiling bool   `env:"ENABLE_PROFILING"`
 }
 
+// NewClient парсит флаги и env + инициализирует конфиг агента
 func NewClient() *ClientConfig {
 	cfg := &ClientConfig{}
 	parseClientFlags(cfg)
@@ -44,6 +48,7 @@ func parseClientFlags(c *ClientConfig) {
 	flag.Parse()
 }
 
+// NewServer парсит флаги и env + инициализирует конфиг сервера
 func NewServer() *ServerConfig {
 	cfg := &ServerConfig{}
 	parseServerFlags(cfg)
@@ -62,6 +67,7 @@ func parseServerFlags(s *ServerConfig) {
 	flag.BoolVar(&s.Restore, "r", true, "need to load data at startup")
 	flag.StringVar(&s.DatabaseDSN, "d", "", "Database Data Source Name")
 	flag.StringVar(&s.SignPass, "k", "", "signature for HashSHA256")
+	flag.BoolVar(&s.EnableProfiling, "p", false, "run pprof server")
 
 	flag.Parse()
 }

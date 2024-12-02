@@ -9,17 +9,14 @@ import (
 type gauge float64
 type counter int64
 
+// MemStorage структура для работы с данными
 type MemStorage struct {
 	GaugeData   map[string]gauge   `json:"gauge"`
 	CounterData map[string]counter `json:"counter"`
 }
 
-//type AllMetrics struct {
-//	Gauge   map[string]gauge   `json:"gauge"`
-//	Counter map[string]counter `json:"counter"`
-//}
-
-func NewMem() *MemStorage {
+// NewMemoryStorage конструктор для структуры
+func NewMemoryStorage() *MemStorage {
 	storage := MemStorage{
 		GaugeData:   make(map[string]gauge),
 		CounterData: make(map[string]counter),

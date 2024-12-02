@@ -15,6 +15,7 @@ type compressWriter struct {
 	zw *gzip.Writer
 }
 
+// newCompressWriter конструктор для compressWriter
 func newCompressWriter(w http.ResponseWriter) *compressWriter {
 	return &compressWriter{
 		w:  w,
@@ -22,14 +23,17 @@ func newCompressWriter(w http.ResponseWriter) *compressWriter {
 	}
 }
 
+// Header обертка для работы с заголовками
 func (c *compressWriter) Header() http.Header {
 	return c.w.Header()
 }
 
+// Write обертка для записи
 func (c *compressWriter) Write(p []byte) (int, error) {
 	return c.zw.Write(p)
 }
 
+// WriteHeader сжимает успешные ответы.
 func (c *compressWriter) WriteHeader(statusCode int) {
 	if statusCode < 300 {
 		c.w.Header().Set("Content-Encoding", "gzip")

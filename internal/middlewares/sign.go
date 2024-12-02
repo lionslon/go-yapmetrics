@@ -11,6 +11,7 @@ import (
 	"net/http"
 )
 
+// CheckSignReq проверяет хеш из заголовков
 func CheckSignReq(password string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) (err error) {
@@ -33,6 +34,7 @@ func CheckSignReq(password string) echo.MiddlewareFunc {
 	}
 }
 
+// GetSign формирует хеш-подпись из фразы-пароля
 func GetSign(body []byte, pass []byte) string {
 	hashValue := hmac.New(sha256.New, pass)
 	hashValue.Write(body)
@@ -40,11 +42,14 @@ func GetSign(body []byte, pass []byte) string {
 	return hex.EncodeToString(sum)
 }
 
+// signResponseWriter реализует интерфейс http.ResponseWriter и позволяет прозрачно для сервера
+// работать с хешом запросов
 type signResponseWriter struct {
 	http.ResponseWriter
 	hash hash.Hash
 }
 
+// Write вставляет хеш в заголовок
 func (w signResponseWriter) Write(b []byte) (int, error) {
 	w.hash.Write(b)
 	w.Header().Set("HashSHA256", hex.EncodeToString(w.hash.Sum(nil)))
