@@ -2,8 +2,6 @@ module github.com/lionslon/go-yapmetrics
 
 go 1.22.1
 
-toolchain go1.23.1
-
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/hashicorp/go-retryablehttp v0.7.5
