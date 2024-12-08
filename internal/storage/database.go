@@ -67,7 +67,7 @@ func (d *dbProvider) Restore() error {
 	if err != nil {
 		return err
 	}
-	if err := rowsCounter.Err(); err != nil {
+	if err = rowsCounter.Err(); err != nil {
 		return err
 	}
 	defer rowsCounter.Close()
@@ -85,7 +85,7 @@ func (d *dbProvider) Restore() error {
 	if err != nil {
 		return err
 	}
-	if err := rowsGauge.Err(); err != nil {
+	if err = rowsGauge.Err(); err != nil {
 		return err
 	}
 	defer rowsGauge.Close()

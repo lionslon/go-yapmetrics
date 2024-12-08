@@ -89,8 +89,8 @@ func GzipUnpacking() echo.MiddlewareFunc {
 			}
 
 			if strings.Contains(header.Get("Content-Encoding"), "gzip") {
-				cr, err := newCompressReader(req.Body)
-				if err != nil {
+				cr, comperr := newCompressReader(req.Body)
+				if comperr != nil {
 					return ctx.String(http.StatusInternalServerError, "")
 				}
 				ctx.Request().Body = cr
