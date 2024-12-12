@@ -26,6 +26,7 @@ var (
 
 func main() {
 
+	config.PrintBuildInfo()
 	cfg := config.NewClient()
 	var wg sync.WaitGroup
 
