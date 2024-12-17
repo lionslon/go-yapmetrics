@@ -19,7 +19,7 @@ type ClientConfig struct {
 	Addr           string `env:"ADDRESS"`
 	SignPass       string `env:"KEY"`
 	CryptoKey      string `env:"CRYPTO_KEY"`
-	ConfigJson     string `env:"CONFIG"`
+	ConfigJSON     string `env:"CONFIG"`
 }
 
 // ServerConfig конфиг сервера
@@ -32,7 +32,7 @@ type ServerConfig struct {
 	DatabaseDSN     string `env:"DATABASE_DSN"`
 	SignPass        string `env:"KEY"`
 	EnableProfiling bool   `env:"ENABLE_PROFILING"`
-	ConfigJson      string `env:"CONFIG"`
+	ConfigJSON      string `env:"CONFIG"`
 }
 
 // NewClient парсит флаги и env + инициализирует конфиг агента
@@ -54,15 +54,15 @@ func parseClientFlags(c *ClientConfig) {
 	flag.IntVar(&c.RateLimit, "l", 10, "rate limit")
 	flag.IntVar(&c.PollInterval, "p", 2, "poll interval in seconds")
 	flag.StringVar(&c.SignPass, "k", "", "signature for HashSHA256")
-	flag.StringVar(&c.ConfigJson, "config", "", "json config")
+	flag.StringVar(&c.ConfigJSON, "config", "", "json config")
 	flag.Parse()
 }
 
 // NewServer парсит флаги и env + инициализирует конфиг сервера
 func NewServer() *ServerConfig {
 	cfg := &ServerConfig{}
-	if cfg.ConfigJson != `` {
-		err := cfg.formServerJson()
+	if cfg.ConfigJSON != `` {
+		err := cfg.formServerJSON()
 		if err != nil {
 			zap.S().Error(err)
 		}
@@ -85,7 +85,7 @@ func parseServerFlags(s *ServerConfig) {
 	flag.StringVar(&s.DatabaseDSN, "d", "", "Database Data Source Name")
 	flag.StringVar(&s.SignPass, "k", "", "signature for HashSHA256")
 	flag.BoolVar(&s.EnableProfiling, "p", false, "run pprof server")
-	flag.StringVar(&s.ConfigJson, "config", "", "json config")
+	flag.StringVar(&s.ConfigJSON, "config", "", "json config")
 
 	flag.Parse()
 }
@@ -104,10 +104,10 @@ func (s *ServerConfig) GetProvider() storage.StorageProvider {
 	return 0
 }
 
-// formServerJson дополняет отсутствующие параметры сервера из json
-func (s *ServerConfig) formServerJson() error {
+// formServerJSON дополняет отсутствующие параметры сервера из json
+func (s *ServerConfig) formServerJSON() error {
 
-	data, err := os.ReadFile(s.ConfigJson)
+	data, err := os.ReadFile(s.ConfigJSON)
 	if err != nil {
 		return fmt.Errorf("cannot read json config: %w", err)
 	}
@@ -159,10 +159,10 @@ func (s *ServerConfig) formServerJson() error {
 	return nil
 }
 
-// formServerJson дополняет отсутствующие параметры агента из json
-func (c *ClientConfig) formClientJson() error {
+// formClientJSON дополняет отсутствующие параметры агента из json
+func (c *ClientConfig) formClientJSON() error {
 
-	data, err := os.ReadFile(c.ConfigJson)
+	data, err := os.ReadFile(c.ConfigJSON)
 	if err != nil {
 		return fmt.Errorf("cannot read json config: %w", err)
 	}
