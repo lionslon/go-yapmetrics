@@ -17,11 +17,13 @@ cmd/agent/main
 cmd/agent/agent
 cmd/server/main
 cmd/server/server
+cmd/staticlint/staticlint
 metricstest-darwin-arm64
 curl
 go
 agent
 server
+keygen
 
 # Dependency directories (remove the comment below to include it)
 vendor/

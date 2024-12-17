@@ -14,6 +14,7 @@ type ClientConfig struct {
 	RateLimit      int    `env:"RATE_LIMIT"`
 	Addr           string `env:"ADDRESS"`
 	SignPass       string `env:"KEY"`
+	CryptoKey      string `env:"CRYPTO_KEY"`
 }
 
 // ServerConfig конфиг сервера
@@ -21,6 +22,7 @@ type ServerConfig struct {
 	Addr            string `env:"ADDRESS"`
 	StoreInterval   int    `env:"STORE_INTERVAL"`
 	FilePath        string `env:"FILE_STORAGE_PATH"`
+	CryptoKey       string `env:"CRYPTO_KEY"`
 	Restore         bool   `env:"RESTORE"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
 	SignPass        string `env:"KEY"`
@@ -41,6 +43,7 @@ func NewClient() *ClientConfig {
 
 func parseClientFlags(c *ClientConfig) {
 	flag.StringVar(&c.Addr, "a", "localhost:8080", "address and port to run server")
+	flag.StringVar(&c.CryptoKey, "c", "", "public crypto-key path")
 	flag.IntVar(&c.ReportInterval, "r", 10, "report interval in seconds")
 	flag.IntVar(&c.RateLimit, "l", 10, "rate limit")
 	flag.IntVar(&c.PollInterval, "p", 2, "poll interval in seconds")
@@ -62,6 +65,7 @@ func NewServer() *ServerConfig {
 
 func parseServerFlags(s *ServerConfig) {
 	flag.StringVar(&s.Addr, "a", "localhost:8080", "address and port to run server")
+	flag.StringVar(&s.CryptoKey, "c", "", "private crypto-key path")
 	flag.IntVar(&s.StoreInterval, "i", 300, "interval for saving metrics on the server")
 	flag.StringVar(&s.FilePath, "f", "/tmp/metrics-db.json", "file storage path for saving data")
 	flag.BoolVar(&s.Restore, "r", true, "need to load data at startup")

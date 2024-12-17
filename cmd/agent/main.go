@@ -3,7 +3,11 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	crand "crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/lionslon/go-yapmetrics/internal/config"
@@ -11,8 +15,10 @@ import (
 	"github.com/lionslon/go-yapmetrics/internal/models"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
+	"go.uber.org/zap"
 	"io"
 	"math/rand"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -138,33 +144,40 @@ func postQueries(cfg *config.ClientConfig) {
 	for k, v := range valuesGauge {
 		payload = append(payload, models.Metrics{ID: k, MType: "gauge", Value: &v})
 	}
-	postJSONBatch(client, urlBatch, payload, cfg.SignPass)
+	err := postJSONBatch(client, urlBatch, payload, cfg)
+	if err != nil {
+		zap.S().Error(err)
+	}
 	pc := int64(pollCount)
-	err := postJSON(client, url, models.Metrics{ID: "PollCount", MType: "counter", Delta: &pc}, cfg.SignPass)
+	err = postJSON(client, url, models.Metrics{ID: "PollCount", MType: "counter", Delta: &pc}, cfg)
 	if err != nil {
 		pollCount = 0
+		zap.S().Error(err)
 	}
 	r := rand.Float64()
-	postJSON(client, url, models.Metrics{ID: "RandomValue", MType: "gauge", Value: &r}, cfg.SignPass)
+	err = postJSON(client, url, models.Metrics{ID: "RandomValue", MType: "gauge", Value: &r}, cfg)
+	if err != nil {
+		zap.S().Error(err)
+	}
 }
 
-func postJSON(c *retryablehttp.Client, url string, m models.Metrics, password string) error {
+func postJSON(c *retryablehttp.Client, url string, m models.Metrics, cfg *config.ClientConfig) error {
 	js, err := json.Marshal(m)
 	if err != nil {
-		return err
+		zap.S().Error(err)
 	}
 
 	gz, err := compress(js)
 	if err != nil {
-		return err
+		zap.S().Error(err)
 	}
 
 	req, err := retryablehttp.NewRequest("POST", url, gz)
 	if err != nil {
-		return err
+		zap.S().Error(err)
 	}
 
-	singPassword := []byte(password)
+	singPassword := []byte(cfg.SignPass)
 	if singPassword != nil {
 		req.Header.Add("HashSHA256", middlewares.GetSign(js, singPassword))
 	}
@@ -173,11 +186,14 @@ func postJSON(c *retryablehttp.Client, url string, m models.Metrics, password st
 	req.Header.Add("content-encoding", "gzip")
 	resp, err := c.Do(req)
 	if err != nil {
-		return err
+		zap.S().Error(err)
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		zap.S().Error(err)
+	}
+	if cfg.CryptoKey != "" {
+		body = encryptBody(cfg.CryptoKey, body)
 	}
 	req.Body = io.NopCloser(bytes.NewReader(body))
 
@@ -185,7 +201,7 @@ func postJSON(c *retryablehttp.Client, url string, m models.Metrics, password st
 	return nil
 }
 
-func postJSONBatch(c *retryablehttp.Client, url string, m []models.Metrics, password string) error {
+func postJSONBatch(c *retryablehttp.Client, url string, m []models.Metrics, cfg *config.ClientConfig) error {
 	js, err := json.Marshal(m)
 	if err != nil {
 		return err
@@ -201,7 +217,7 @@ func postJSONBatch(c *retryablehttp.Client, url string, m []models.Metrics, pass
 		return err
 	}
 
-	singPassword := []byte(password)
+	singPassword := []byte(cfg.SignPass)
 	if singPassword != nil {
 		req.Header.Add("HashSHA256", middlewares.GetSign(js, singPassword))
 	}
@@ -215,6 +231,9 @@ func postJSONBatch(c *retryablehttp.Client, url string, m []models.Metrics, pass
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
+	}
+	if cfg.CryptoKey != "" {
+		body = encryptBody(cfg.CryptoKey, body)
 	}
 	req.Body = io.NopCloser(bytes.NewReader(body))
 
@@ -234,4 +253,23 @@ func compress(b []byte) ([]byte, error) {
 	}
 	gz.Close()
 	return bf.Bytes(), nil
+}
+
+func encryptBody(keyFilename string, data []byte) []byte {
+	publicKeyPEM, err := os.ReadFile(keyFilename)
+	if err != nil {
+		return data
+	}
+	publicKeyBlock, _ := pem.Decode(publicKeyPEM)
+	publicKey, err := x509.ParsePKIXPublicKey(publicKeyBlock.Bytes)
+	if err != nil {
+		return data
+	}
+
+	plaintext := []byte("hello, world!")
+	ciphertext, err := rsa.EncryptPKCS1v15(crand.Reader, publicKey.(*rsa.PublicKey), plaintext)
+	if err != nil {
+		return data
+	}
+	return ciphertext
 }
