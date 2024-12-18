@@ -5,6 +5,7 @@ type StorageWorker interface {
 	Dump() error
 	IntervalDump()
 	Check() error
+	Close() error
 }
 
 type StorageProvider int
