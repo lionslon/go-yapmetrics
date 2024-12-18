@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/lionslon/go-yapmetrics/internal/config"
@@ -9,13 +10,15 @@ import (
 	"github.com/lionslon/go-yapmetrics/internal/storage"
 	"github.com/lionslon/go-yapmetrics/pkg/utils/profile"
 	"go.uber.org/zap"
-	"log"
+	"os/signal"
+	"syscall"
 )
 
 type APIServer struct {
-	cfg  *config.ServerConfig
-	echo *echo.Echo
-	st   *storage.MemStorage
+	cfg             *config.ServerConfig
+	echo            *echo.Echo
+	st              *storage.MemStorage
+	storageProvider storage.StorageWorker
 }
 
 func New() *APIServer {
@@ -34,26 +37,25 @@ func New() *APIServer {
 	zap.ReplaceGlobals(logger)
 	defer logger.Sync()
 
-	var storageProvider storage.StorageWorker
 	var err error
 	switch cfg.GetProvider() {
 	case storage.FileProvider:
-		storageProvider = storage.NewFileProvider(cfg.FilePath, cfg.StoreInterval, apiS.st)
+		apiS.storageProvider = storage.NewFileProvider(cfg.FilePath, cfg.StoreInterval, apiS.st)
 	case storage.DBProvider:
-		storageProvider, err = storage.NewDBProvider(cfg.DatabaseDSN, cfg.StoreInterval, apiS.st)
+		apiS.storageProvider, err = storage.NewDBProvider(cfg.DatabaseDSN, cfg.StoreInterval, apiS.st)
 	}
 	if err != nil {
 		zap.S().Error(err)
 	}
 	if cfg.Restore {
-		err := storageProvider.Restore()
+		err := apiS.storageProvider.Restore()
 		if err != nil {
 			zap.S().Error(err)
 		}
 	}
 
 	if cfg.StoreIntervalNotZero() {
-		go storageProvider.IntervalDump()
+		go apiS.storageProvider.IntervalDump()
 	}
 
 	apiS.echo.Use(middlewares.WithLogging())
@@ -74,16 +76,36 @@ func New() *APIServer {
 	apiS.echo.POST("/update/", handler.UpdateJSON())
 	apiS.echo.POST("/update/:typeM/:nameM/:valueM", handler.UpdateMetrics())
 	apiS.echo.POST("/updates/", handler.UpdatesJSON())
-	apiS.echo.GET("/ping", handler.PingDB(storageProvider))
+	apiS.echo.GET("/ping", handler.PingDB(apiS.storageProvider))
 
 	return apiS
 }
 
 func (a *APIServer) Start() error {
+	rootContext, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	defer stop()
+
 	err := a.echo.Start(a.cfg.Addr)
 	if err != nil {
-		log.Fatal(err)
+		zap.S().Error(err)
 	}
+	go a.gracefulShutdown(rootContext)
 
 	return nil
+}
+
+// gracefulShutdown - Запускается в получении любого из сигнала (syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+func (a *APIServer) gracefulShutdown(ctx context.Context) {
+	<-ctx.Done()
+
+	zap.S().Info("shutting down gracefully")
+	err := a.storageProvider.Close()
+	if err != nil {
+		zap.S().Error("error during storage closing")
+	}
+
+	err = a.echo.Shutdown(context.Background())
+	if err != nil {
+		zap.S().Error("error during server shutdown")
+	}
 }

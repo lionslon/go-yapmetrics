@@ -16,8 +16,17 @@ type fileProvider struct {
 	st            *MemStorage
 }
 
-// Check структура для работы со структурой данных в файле
+// Check Проверка работы с файлом
 func (f *fileProvider) Check() error {
+	_, err := os.ReadFile(f.filePath)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Close Закрытие файла
+func (f *fileProvider) Close() error {
 	return errors.New("not provided for this storage type")
 }
 

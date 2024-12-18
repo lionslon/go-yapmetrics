@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	crand "crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -19,8 +20,10 @@ import (
 	"io"
 	"math/rand"
 	"os"
+	"os/signal"
 	"runtime"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -36,6 +39,8 @@ func main() {
 	cfg := config.NewClient()
 	var wg sync.WaitGroup
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	pollTicker := time.NewTicker(time.Duration(cfg.PollInterval) * time.Second)
 	defer pollTicker.Stop()
 	reportTicker := time.NewTicker(time.Duration(cfg.ReportInterval) * time.Second)
@@ -71,6 +76,7 @@ func main() {
 			}()
 		}
 	}()
+	go gracefulShutdown(ctx)
 	wg.Wait()
 }
 
@@ -272,4 +278,11 @@ func encryptBody(keyFilename string, data []byte) []byte {
 		return data
 	}
 	return ciphertext
+}
+
+// gracefulShutdown - Запускается в получении любого из сигнала (syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+func gracefulShutdown(ctx context.Context) {
+	<-ctx.Done()
+	zap.S().Info("graceful shutdown. waiting a little")
+	time.Sleep(time.Second)
 }
