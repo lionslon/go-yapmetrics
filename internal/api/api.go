@@ -10,8 +10,10 @@ import (
 	"github.com/lionslon/go-yapmetrics/internal/storage"
 	"github.com/lionslon/go-yapmetrics/pkg/utils/profile"
 	"go.uber.org/zap"
+	"net/http"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 type APIServer struct {
@@ -81,17 +83,18 @@ func New() *APIServer {
 	return apiS
 }
 
-func (a *APIServer) Start() error {
+func (a *APIServer) Start() {
 	rootContext, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
 
-	err := a.echo.Start(a.cfg.Addr)
-	if err != nil {
-		zap.S().Error(err)
-	}
-	go a.gracefulShutdown(rootContext)
+	go func() {
+		err := a.echo.Start(a.cfg.Addr)
+		if err != nil && err != http.ErrServerClosed {
+			zap.S().Fatal(err)
+		}
+	}()
 
-	return nil
+	a.gracefulShutdown(rootContext)
 }
 
 // gracefulShutdown - Запускается в получении любого из сигнала (syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
@@ -103,9 +106,11 @@ func (a *APIServer) gracefulShutdown(ctx context.Context) {
 	if err != nil {
 		zap.S().Error("error during storage closing")
 	}
-
-	err = a.echo.Shutdown(context.Background())
+	ctxShutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	err = a.echo.Shutdown(ctxShutdown)
 	if err != nil {
 		zap.S().Error("error during server shutdown")
 	}
+	zap.S().Info("shutting down gracefully was finished successfully")
 }

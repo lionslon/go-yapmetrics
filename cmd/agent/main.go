@@ -37,7 +37,7 @@ func main() {
 
 	config.PrintBuildInfo()
 	cfg := config.NewClient()
-	var wg sync.WaitGroup
+	//var wg sync.WaitGroup
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -47,10 +47,10 @@ func main() {
 	defer reportTicker.Stop()
 
 	limitChan := make(chan struct{}, cfg.RateLimit)
-	wg.Add(1)
+	//wg.Add(1)
 
 	go func() {
-		defer wg.Done()
+		//defer wg.Done()
 		for range pollTicker.C {
 			var metricsWg sync.WaitGroup
 			metricsWg.Add(2)
@@ -67,7 +67,7 @@ func main() {
 	}()
 
 	go func() {
-		defer wg.Done()
+		//defer wg.Done()
 		for range reportTicker.C {
 			limitChan <- struct{}{}
 			go func() {
@@ -76,8 +76,8 @@ func main() {
 			}()
 		}
 	}()
-	go gracefulShutdown(ctx)
-	wg.Wait()
+	gracefulShutdown(ctx)
+	//wg.Wait()
 }
 
 func getMetrics() {
@@ -284,5 +284,6 @@ func encryptBody(keyFilename string, data []byte) []byte {
 func gracefulShutdown(ctx context.Context) {
 	<-ctx.Done()
 	zap.S().Info("graceful shutdown. waiting a little")
+	fmt.Println("graceful shutdown. waiting a little")
 	time.Sleep(time.Second)
 }

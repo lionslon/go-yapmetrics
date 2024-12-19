@@ -2,7 +2,6 @@ package storage
 
 import (
 	"encoding/json"
-	"errors"
 	"go.uber.org/zap"
 	"os"
 	"path"
@@ -27,7 +26,7 @@ func (f *fileProvider) Check() error {
 
 // Close Закрытие файла
 func (f *fileProvider) Close() error {
-	return errors.New("not provided for this storage type")
+	return nil
 }
 
 // NewFileProvider конструктор для работы со структурой данных в файле

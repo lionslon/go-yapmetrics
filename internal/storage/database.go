@@ -154,7 +154,12 @@ func (d *dbProvider) Dump() error {
 func (d *dbProvider) Close() error {
 	err := d.DB.Ping()
 	if err != nil {
-		return errors.New("Empty connection string")
+		return nil
+	}
+
+	err = d.DB.Close()
+	if err != nil {
+		return errors.New("Cannot close db")
 	}
 	return nil
 }
