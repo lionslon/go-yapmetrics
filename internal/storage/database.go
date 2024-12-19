@@ -149,3 +149,17 @@ func (d *dbProvider) Dump() error {
 
 	return tx.Commit()
 }
+
+// Close закрывает подключение к БД
+func (d *dbProvider) Close() error {
+	err := d.DB.Ping()
+	if err != nil {
+		return nil
+	}
+
+	err = d.DB.Close()
+	if err != nil {
+		return errors.New("Cannot close db")
+	}
+	return nil
+}
