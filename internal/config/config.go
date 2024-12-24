@@ -7,6 +7,7 @@ import (
 	"github.com/caarlos0/env"
 	"github.com/lionslon/go-yapmetrics/internal/storage"
 	"go.uber.org/zap"
+	"net"
 	"os"
 	"time"
 )
@@ -20,6 +21,7 @@ type ClientConfig struct {
 	SignPass       string `env:"KEY"`
 	CryptoKey      string `env:"CRYPTO_KEY"`
 	ConfigJSON     string `env:"CONFIG"`
+	IP             string //IP-адрес хоста агента
 }
 
 // ServerConfig конфиг сервера
@@ -33,6 +35,7 @@ type ServerConfig struct {
 	SignPass        string `env:"KEY"`
 	EnableProfiling bool   `env:"ENABLE_PROFILING"`
 	ConfigJSON      string `env:"CONFIG"`
+	TrustedSubnet   string `env:"TRUSTED_SUBNET"`
 }
 
 // NewClient парсит флаги и env + инициализирует конфиг агента
@@ -86,6 +89,7 @@ func parseServerFlags(s *ServerConfig) {
 	flag.StringVar(&s.SignPass, "k", "", "signature for HashSHA256")
 	flag.BoolVar(&s.EnableProfiling, "p", false, "run pprof server")
 	flag.StringVar(&s.ConfigJSON, "config", "", "json config")
+	flag.StringVar(&s.TrustedSubnet, "t", "", "string representation of classless addressing (CIDR)")
 
 	flag.Parse()
 }
@@ -153,6 +157,10 @@ func (s *ServerConfig) formServerJSON() error {
 			if s.CryptoKey == `` {
 				s.CryptoKey = value.(string)
 			}
+		case "trusted_subnet":
+			if s.TrustedSubnet == `` {
+				s.TrustedSubnet = value.(string)
+			}
 		}
 	}
 
@@ -206,6 +214,15 @@ func (c *ClientConfig) formClientJSON() error {
 			}
 		}
 	}
+
+	// Определим IP-адрес хоста агента
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		return fmt.Errorf("cannot get agent ip: %w", err)
+	}
+	defer conn.Close()
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	c.IP = localAddr.IP.String()
 
 	return nil
 }
