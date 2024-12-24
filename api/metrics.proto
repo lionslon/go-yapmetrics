@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package metrics;
+
+option go_package = "./api";
+
+
+message Metric {
+    string id = 1;
+    string type = 2;
+    double value = 3;
+}
+
+message Empty {}
+
+message MetricsList {
+    repeated Metric metrics = 1;
+}
+
+service MetricsService {
+    rpc SendMetric (Metric) returns (Empty);
+    rpc GetMetrics (Empty) returns (MetricsList);
+}

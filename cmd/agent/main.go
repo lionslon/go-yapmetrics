@@ -11,13 +11,16 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/hashicorp/go-retryablehttp"
+	pb "github.com/lionslon/go-yapmetrics/api"
 	"github.com/lionslon/go-yapmetrics/internal/config"
+	"github.com/lionslon/go-yapmetrics/internal/grpcclient"
 	"github.com/lionslon/go-yapmetrics/internal/models"
 	"github.com/lionslon/go-yapmetrics/internal/services"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
 	"go.uber.org/zap"
 	"io"
+	"log"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -41,16 +44,22 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	client, err := grpcclient.NewClient(":9090")
+	if err != nil {
+		log.Fatalf("Failed to connect to gRPC server: %v", err)
+	}
+	defer client.Close()
+	log.Println("Connected to gRPC server")
+
 	pollTicker := time.NewTicker(time.Duration(cfg.PollInterval) * time.Second)
 	defer pollTicker.Stop()
 	reportTicker := time.NewTicker(time.Duration(cfg.ReportInterval) * time.Second)
 	defer reportTicker.Stop()
 
 	limitChan := make(chan struct{}, cfg.RateLimit)
-	//wg.Add(1)
 
 	go func() {
-		//defer wg.Done()
 		for range pollTicker.C {
 			var metricsWg sync.WaitGroup
 			metricsWg.Add(2)
@@ -67,17 +76,20 @@ func main() {
 	}()
 
 	go func() {
-		//defer wg.Done()
 		for range reportTicker.C {
 			limitChan <- struct{}{}
 			go func() {
+				defer func() { <-limitChan }()
+
+				// Отправляем метрики через HTTP
 				postQueries(cfg)
-				<-limitChan
+
+				// Отправляем метрики через gRPC
+				sendMetricsToGRPC(client)
 			}()
 		}
 	}()
 	gracefulShutdown(ctx)
-	//wg.Wait()
 }
 
 func getMetrics() {
@@ -279,6 +291,24 @@ func encryptBody(keyFilename string, data []byte) []byte {
 		return data
 	}
 	return ciphertext
+}
+
+func sendMetricsToGRPC(client *grpcclient.Client) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	for id, value := range valuesGauge {
+		err := client.SendMetric(&pb.Metric{
+			Id:    id,
+			Type:  "gauge",
+			Value: value,
+		})
+		if err != nil {
+			log.Printf("Failed to send metric %s: %v", id, err)
+		} else {
+			log.Printf("Metric %s sent successfully", id)
+		}
+	}
 }
 
 // gracefulShutdown - Запускается в получении любого из сигнала (syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
