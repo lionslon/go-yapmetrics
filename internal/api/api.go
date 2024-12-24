@@ -68,7 +68,10 @@ func New() *APIServer {
 		apiS.echo.Use(middlewares.CheckSignReq(cfg.SignPass))
 	}
 	if cfg.CryptoKey != "" {
-		apiS.echo.Use(middlewares.DecryptBody(cfg.SignPass))
+		apiS.echo.Use(middlewares.DecryptBody(cfg.CryptoKey))
+	}
+	if cfg.TrustedSubnet != "" {
+		apiS.echo.Use(middlewares.CheckXRealIP(cfg.TrustedSubnet))
 	}
 
 	apiS.echo.GET("/", handler.AllMetricsValues())

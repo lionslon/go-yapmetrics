@@ -190,6 +190,7 @@ func postJSON(c *retryablehttp.Client, url string, m models.Metrics, cfg *config
 
 	req.Header.Add("content-type", "application/json")
 	req.Header.Add("content-encoding", "gzip")
+	req.Header.Add("X-Real-IP", cfg.IP)
 	resp, err := c.Do(req)
 	if err != nil {
 		zap.S().Error(err)
