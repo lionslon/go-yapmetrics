@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/lionslon/go-yapmetrics/internal/config"
-	"github.com/lionslon/go-yapmetrics/internal/middlewares"
 	"github.com/lionslon/go-yapmetrics/internal/models"
+	"github.com/lionslon/go-yapmetrics/internal/services"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
 	"go.uber.org/zap"
@@ -185,7 +185,7 @@ func postJSON(c *retryablehttp.Client, url string, m models.Metrics, cfg *config
 
 	singPassword := []byte(cfg.SignPass)
 	if singPassword != nil {
-		req.Header.Add("HashSHA256", middlewares.GetSign(js, singPassword))
+		req.Header.Add("HashSHA256", services.GetSign(js, singPassword))
 	}
 
 	req.Header.Add("content-type", "application/json")
@@ -225,7 +225,7 @@ func postJSONBatch(c *retryablehttp.Client, url string, m []models.Metrics, cfg 
 
 	singPassword := []byte(cfg.SignPass)
 	if singPassword != nil {
-		req.Header.Add("HashSHA256", middlewares.GetSign(js, singPassword))
+		req.Header.Add("HashSHA256", services.GetSign(js, singPassword))
 	}
 
 	req.Header.Add("content-type", "application/json")
