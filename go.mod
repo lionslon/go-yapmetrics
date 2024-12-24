@@ -1,8 +1,6 @@
 module github.com/lionslon/go-yapmetrics
 
-go 1.22
-
-toolchain go1.22.10
+go 1.21
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
@@ -16,7 +14,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.26.0
 	golang.org/x/tools v0.22.0
-	google.golang.org/grpc v1.69.2
+	google.golang.org/grpc v1.58.0
 	google.golang.org/protobuf v1.35.1
 	honnef.co/go/tools v0.4.7
 )
@@ -26,6 +24,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
