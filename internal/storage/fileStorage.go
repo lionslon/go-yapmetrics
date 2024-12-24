@@ -2,7 +2,6 @@ package storage
 
 import (
 	"encoding/json"
-	"errors"
 	"go.uber.org/zap"
 	"os"
 	"path"
@@ -16,9 +15,18 @@ type fileProvider struct {
 	st            *MemStorage
 }
 
-// Check структура для работы со структурой данных в файле
+// Check Проверка работы с файлом
 func (f *fileProvider) Check() error {
-	return errors.New("not provided for this storage type")
+	_, err := os.ReadFile(f.filePath)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Close Закрытие файла
+func (f *fileProvider) Close() error {
+	return nil
 }
 
 // NewFileProvider конструктор для работы со структурой данных в файле
