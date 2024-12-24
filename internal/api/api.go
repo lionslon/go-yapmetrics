@@ -61,7 +61,6 @@ func New() *APIServer {
 	}
 
 	apiS.echo.Use(middlewares.WithLogging())
-	//apiS.echo.Use(middlewares.GzipUnpacking())
 	apiS.echo.Use(middleware.GzipWithConfig(middleware.GzipConfig{
 		Level: 5,
 	}))
